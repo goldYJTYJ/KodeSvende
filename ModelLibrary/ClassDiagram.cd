@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
+  <Class Name="ModelLibrary.DTO.CarInfoObject">
+    <Position X="9.25" Y="0.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAEAAAAAAAAABAAAAAAAAAIAAACAAAAAAAAAAAgAAAA=</HashCode>
+      <FileName>DTO\CarInfoObject.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ModelLibrary.Comment">
+    <Position X="6.25" Y="0.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>QAADAAAACAAAAAAAAAAAAAgAAACgAAAABQgAAAAAAAA=</HashCode>
+      <FileName>Comment.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ModelLibrary.EconomyReportElectric">
+    <Position X="5.75" Y="6" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAACAAAAAAAAAAAAAgAAAAAAAEAJAAAAAAAAAA=</HashCode>
+      <FileName>EconomyReportElectric.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ModelLibrary.EconomyReportICE">
+    <Position X="3.25" Y="6" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>ACACAAAACAAAAAAIAAAAAAgAIAAAAAAAJAAAAAAAAAA=</HashCode>
+      <FileName>EconomyReportICE.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ModelLibrary.EconomySummaryElectric">
+    <Position X="8.25" Y="6" Width="3.75" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAACIAAAAAAAAAAAAAAAAEgAAAAJAAAQAAAAAA=</HashCode>
+      <FileName>EconomySummaryElectric.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ModelLibrary.EconomySummaryICE">
+    <Position X="3.25" Y="8.75" Width="3" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAAQAAAAAAABAAAAAAAAQEAAAAAJAAAAQAAAAA=</HashCode>
+      <FileName>EconomySummaryICE.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ModelLibrary.Engine">
+    <Position X="9.25" Y="2.75" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>EAACAEAACAAAgAAAAAEAAIAAAAAAAAIAAwgAAAAAAAA=</HashCode>
+      <FileName>Engine.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ModelLibrary.Manufacturer">
+    <Position X="6.25" Y="3.75" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAACAAAACAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Manufacturer.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ModelLibrary.Model">
+    <Position X="3.25" Y="3.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAgCAAAADAAAAAAAAAAAAAAAAAEAAAAAAAAAAAgAAAA=</HashCode>
+      <FileName>Model.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="ModelLibrary.User">
+    <Position X="3.25" Y="0.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAACAEAACSACAAAAAAAAAAAAAAAAAAACAAAAAAACAAg=</HashCode>
+      <FileName>User.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="8.77" />
+</ClassDiagram>

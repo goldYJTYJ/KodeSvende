@@ -1,0 +1,9 @@
+﻿@page
+@using Website.Pages.Shared.Componets
+@model Website.Pages.AdminSearchUserModel
+@{
+    ViewData["Title"] = "Admin Search User";
+}
+@{
+}
+@(await Html.RenderComponentAsync<AdminSearchUserRC>(RenderMode.ServerPrerendered))

@@ -1,0 +1,356 @@
+﻿@using ModelLibrary;
+@using ModelLibrary.Enums
+@using ModelLibrary.DTO;
+@using Services;
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.AspNetCore.Components.Web
+@using Newtonsoft.Json;
+@using System.Security.Claims
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Forms
+@inject EcoService EcoService
+@inject CommentService CommentService
+@inject NavigationManager NavManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAuthorizationService AuthorizationService
+@inject IJSRuntime JSRuntime
+
+<!-- Create new comment box -->
+@if (CarInfo != null && Authenticated)
+{
+    <div class="card text-center mb-2">
+        <div class="card-header cardColor">
+            Give Your Input On This Car
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label class="small" for="commentTextbox">Here you can discuss your experiences with this car, be it economy, reliability or ownership. </label>
+                <textarea maxlength="500" class="form-control" id="CommentText" rows="3" placeholder="How did you like your @CarInfo.ManufacturerName @CarInfo.ModelName?" @bind="CommentContent.CommentContent"></textarea>
+                <p class="text-danger">@CommentMessage</p>
+            </div>
+            <button type="button" class="btn btn-sm btn-success"
+                    @onclick="SendComment">
+                Submit Comment
+            </button>
+        </div>
+        <div class="card-footer text-muted">
+        </div>
+    </div>
+}
+else
+{
+    <!-- If user is not logged in, display please login to comment, and deactivate feature -->
+    <div class="card text-center mb-2">
+        <div class="card-header cardColor">
+            Give Your Input On This Car
+        </div>
+        <div class="card-body">
+            <div class="form-group">
+                <label class="small" for="commentTextbox">Here you can discuss your experiences with this car, be it economy, reliability or ownership. </label>
+                <textarea disabled class="form-control" id="CommentText" rows="3" placeholder="Please log in to comment on this vehicle"></textarea>
+            </div>
+            <a href="#" class="btn btn-success disabled">Submit Comment</a>
+        </div>
+        <div class="card-footer text-muted">
+        </div>
+    </div>
+}
+
+<!-- Show comments -->
+<!-- If no comments, display a no comments made -->
+@if (NoComments)
+{
+    <div class="card text-center mb-2">
+        <div class="card-body">
+            <div class="form-group">
+                <p>There are no comments on this car. Yours can be the first!</p>
+            </div>
+        </div>
+    </div>
+}
+// Load all comments
+else if (!NoComments && commentList != null)
+{
+    foreach (var comment in commentList)
+    {
+        @if ((!authState.User.IsInRole("Administrator") && comment.Is_Active == true) || authState.User.IsInRole("Administrator")) {
+
+            <div class="card mb-2">
+                <div class="card-header cardColor">
+                    <!-- Display User name and comment date -->
+                    @comment.UserName - @comment.CreationDate.ToString(System.Globalization.CultureInfo.CreateSpecificCulture("fr-FR"))
+
+                    <!-- 1 Admin options -->
+                    @if (authState.User.IsInRole("Administrator"))
+                    {
+                        <!-- Display Activate Deactivate correctly -->
+                        @if (comment.Is_Active == true)
+                        {
+                            <button type="button" class="btn btn-sm btn-secondary float-right" @onclick="() => DeactivateActivateComment(comment)">Deactivate</button>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-sm btn-secondary float-right" @onclick="() => DeactivateActivateComment(comment)"> <div class="text-in-button">&nbsp; Activate &nbsp;</div> </button>
+                        }
+                        <!-- Delete comment -->
+                        <button type="button" class="btn btn-sm btn-secondary mr-2 float-right" @onclick="() => DeleteComment(comment)">Delete</button>
+                    }
+                    // 2 User Options
+                    else if (authState.User.IsInRole("User") && comment.UserID == Int32.Parse(authState.User.Claims.FirstOrDefault(x => x.Type == "Id").Value))
+                    {
+                        <button type="button" class="btn btn-sm btn-secondary float-right" @onclick="() => DeactivateActivateComment(comment)">Deactivate</button>
+                    }
+                </div>
+                <!-- The comment itself -->
+                <div class="card-body">
+                    <p class="card-text"> @comment.CommentContent </p> 
+                    @if (!comment.Is_Active)
+                    {
+                        <p class="text-danger" >This comment has been deactivated.</p>
+                    }
+                    <blockquote class="blockquote mb-0">
+                        <footer class="blockquote-footer small"> Commenting on the @CarInfo.ManufacturerName @CarInfo.ModelName @comment.Engine </footer>
+                    </blockquote>
+                </div>
+            </div>
+        }
+    }
+}
+<!-- If there is an error loading comments display errors here -->
+@if (ErrorMessage != null)
+{
+    <p class="text-danger">@ErrorMessage</p>
+}
+
+@code {
+
+    // On load
+    private string APIAnswerCarInfo { get; set; }
+    public CarInfoObject CarInfo { get; set; }
+    private string APIAnswerComments { get; set; }
+    private string APIAnswerCreateComment { get; set; }
+    private string APIAnswerUpdateDelete { get; set; }
+    private List<Comment> commentList { get; set; }
+    public int ViewType { get; set; }
+    public int EngineID { get; set; }
+    private bool NoComments { get; set; }
+    // Authentication
+    private IEnumerable<Claim> _claims = Enumerable.Empty<Claim>();
+    private AuthenticationState authState { get; set; }
+    private bool Authenticated { get; set; }
+    // Error
+    private string ErrorMessage { get; set; }
+    private string CommentMessage { get; set; }
+    //Comment
+    private Comment CommentContent { get; set; } = new Comment();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get engineID from query 
+        try
+        {
+            // Query from URL
+            var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("EngineID", out var EngineID) && (QueryHelpers.ParseQuery(uri.Query).TryGetValue("Type", out var type)))
+            {
+                // Tjek if url input is valid
+                if (Int32.TryParse(EngineID, out var parsed))
+                {
+                    this.EngineID = Convert.ToInt32(EngineID);
+                    // Get car information
+                    // Error messages for this handled on the economy page
+                    APIAnswerCarInfo = await EcoService.GetCarInformation(this.EngineID);
+                    CarInfo = JsonConvert.DeserializeObject<CarInfoObject>(APIAnswerCarInfo);
+
+                    // Load comments
+                    await LoadComments(CarInfo.ModelID);
+                }
+
+            }
+
+        }
+        catch (Exception)
+        {
+            // Error messages displayed on economy page
+        }
+
+        // Check user authetication status
+        authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var CurrentUser = authState.User;
+
+        if (CurrentUser.Identity.IsAuthenticated)
+        {
+            Authenticated = true;
+            _claims = CurrentUser.Claims;
+        }
+    }
+
+    // load comments for car model
+    private async Task LoadComments(int ModelID)
+    {
+        try
+        {
+            APIAnswerComments = await CommentService.GetComments(ModelID);
+            commentList = JsonConvert.DeserializeObject<List<Comment>>(APIAnswerComments);
+
+            // If no comments have been made, set no comments
+            if (commentList.Count == 0)
+            {
+                NoComments = true;
+            }
+        }
+        catch (Exception)
+        {
+            // Give Error Message
+            ErrorMessage = APIAnswerComments;
+        }
+    }
+
+    // Send comment
+    private async Task SendComment()
+    {
+        //Check textbox
+        if (String.IsNullOrEmpty(CommentContent.CommentContent))
+        {
+            CommentMessage = "Please enter a comment above.";
+        }
+        else
+        {
+            // Create comment object 
+            CommentContent.UserID = Int32.Parse(authState.User.Claims.FirstOrDefault(x => x.Type == "Id").Value);
+            CommentContent.UserName = authState.User.Identity.Name + " " + authState.User.Claims.FirstOrDefault(x => x.Type == "LastName").Value;
+            CommentContent.CreationDate = DateTime.Now;
+            CommentContent.Is_Active = true;
+            CommentContent.ModelID = CarInfo.ModelID;
+            CommentContent.Engine = CarInfo.EngineName;
+
+            // Send to API
+            try
+            {
+                APIAnswerCreateComment = await CommentService.CreateComment(CommentContent);
+
+                if (APIAnswerCreateComment.ToString() == "Comment Saved.")
+                {
+                    NoComments = false;
+                    // Reload comments and empty object
+                    CommentMessage = "Your comment has been submitted.";
+                    await LoadComments(CarInfo.ModelID);
+                    CommentContent = new Comment();
+                }
+                else
+                {
+                    CommentMessage = APIAnswerCreateComment;
+                }
+            }
+            catch (Exception)
+            {
+                CommentMessage = APIAnswerCreateComment;
+            }
+        }
+    }
+
+    //Deactivate Comment
+    private async Task DeactivateActivateComment(Comment comment)
+    {
+        try
+        {
+
+            // For users on deactivation
+            if (authState.User.IsInRole("User"))
+            {
+                // Ask for confirmation
+                if (await JSRuntime.InvokeAsync<bool>("confirm", "Warning\nAre you sure you want to remove this comment?"))
+                {
+                    // make sure object is empty
+                    APIAnswerUpdateDelete = null;
+
+                    // Change comment is_active status
+                    if (comment.Is_Active == true)
+                    {
+                        comment.Is_Active = false;
+                    }
+                    else
+                    {
+                        comment.Is_Active = true;
+                    }
+                    // Deactivate comment, reload comments and provide error message if nessesary
+                    APIAnswerUpdateDelete = await CommentService.DeactivateActivateComment(comment);
+
+                    // if successful reload otherwise display error
+                    if (APIAnswerUpdateDelete.ToString() == "Comment Removed" || APIAnswerUpdateDelete.ToString() == "Comment Activated")
+                    {
+                        await LoadComments(CarInfo.ModelID);
+                    }
+                    else
+                    {
+                        ErrorMessage = APIAnswerUpdateDelete.ToString();
+                    }
+                }
+            }
+            // For administrators
+            else
+            {
+                // make sure object is empty
+                APIAnswerUpdateDelete = null;
+
+                // Change comment is_active status
+                if (comment.Is_Active == true)
+                {
+                    comment.Is_Active = false;
+                }
+                else
+                {
+                    comment.Is_Active = true;
+                }
+                // Deactivate comment, reload comments and provide error message if nessesary
+                APIAnswerUpdateDelete = await CommentService.DeactivateActivateComment(comment);
+
+                // if successful reload otherwise display error
+                if (APIAnswerUpdateDelete.ToString() == "Comment Removed" || APIAnswerUpdateDelete.ToString() == "Comment Activated")
+                {
+                    await LoadComments(CarInfo.ModelID);
+                }
+                else
+                {
+                    ErrorMessage = APIAnswerUpdateDelete.ToString();
+                }
+            }
+
+        }
+        catch (Exception)
+        {
+            ErrorMessage = APIAnswerUpdateDelete.ToString();
+        }
+    }
+
+    //Delete comment - Admin feature
+    private async Task DeleteComment(Comment comment)
+    {
+        try
+        {
+            // Ask for confirmation
+            if (await JSRuntime.InvokeAsync<bool>("confirm", "Warning\nThe delete function permanently removes a comment."))
+            {
+                // Delete comment, reload comments and provide error message if nessesary
+                APIAnswerUpdateDelete = await CommentService.DeleteComment(comment);
+
+                // if successful reload otherwise display error
+                if (APIAnswerUpdateDelete.ToString() == "Comment Deleted.")
+                {
+                    await LoadComments(CarInfo.ModelID);
+                }
+                else
+                {
+                    ErrorMessage = APIAnswerUpdateDelete.ToString();
+                }
+
+            }
+        }
+        catch (Exception)
+        {
+            ErrorMessage = APIAnswerUpdateDelete.ToString();
+        }
+    }
+}

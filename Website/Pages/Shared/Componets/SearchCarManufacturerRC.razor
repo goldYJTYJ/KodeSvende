@@ -1,0 +1,114 @@
+﻿@using ModelLibrary;
+@using Services;
+@using Microsoft.AspNetCore.Components.Web
+@using Newtonsoft.Json;
+@using System.Net.Http;
+@inject Manufacturer manufacturer
+@inject SearchService SearchService
+@inject NavigationManager NavManager
+
+<!-- start page header -->
+<section class="jumbotron text-center bg-white" style="padding: 1rem 0.5rem; margin-bottom: 0rem;">
+    <div class="container">
+        <div>
+            <img src="/Images/yea.PNG" class="img-fluid" />
+        </div>
+        <p class="lead text-muted small">Looking for a new car? <br /> Find the real economy figures with Range Mate. <br /> Start your search right here.</p>
+    </div>
+</section>
+
+<!-- Search -->
+<div class="container">
+    <div class="row">
+        <div class="col-xs-6">
+            <div class="input-group mb-1">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="inputGroup-sizing-sm">Search</span>
+                </div>
+                <input class="form-control" type="search" placeholder="Find Your Manufacturer Here..."
+                       value="@SearchValue" @oninput="SearchChangeEvent">
+            </div>
+        </div>
+        <div class="col-xs-6 ml-2">
+            <button class="btn btn-success" type="button" @onclick="() => { reset(); }">Reset</button>
+        </div>
+    </div>
+
+    <div class="row">
+        <table id="manufacturerTable" class="table bg-light table-striped table-hover hoverHand" style="border-radius: 0.4em; overflow: hidden;">
+            <thead class="tablehead">
+                <tr>
+                    <th scope="col">Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (manufacturersSearchList != null)
+                {
+                    @foreach (Manufacturer manu in manufacturersSearchList)
+                    {
+                        <tr @onclick="() => SelectManufacturer(manu.Id)">
+                            <td>@manu.Name</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- Error message -->
+@if (ErrorMessage != null)
+{
+    <p class="text-danger">@ErrorMessage</p>
+}
+
+@code {
+    private string ErrorMessage { get; set; }
+    private string APIAnswer { get; set; }
+    public List<Manufacturer> manufacturers { get; set; }
+    public List<Manufacturer> manufacturersSearchList { get; set; }
+    public string SearchValue { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetManufacturerList();
+    }
+
+    // fill manufacturers list
+    public async Task GetManufacturerList()
+    {
+        APIAnswer = await SearchService.GetManufacturerList();
+
+        try
+        {
+            manufacturers = JsonConvert.DeserializeObject<List<Manufacturer>>(APIAnswer);
+            manufacturersSearchList = manufacturers;
+        }
+        catch (Exception)
+        {
+            ErrorMessage = APIAnswer;
+        }
+    }
+
+    // Onclick take manufacturer ID and send to next page in query
+    public void SelectManufacturer(int ManufacturerID)
+    {
+        // Send the selected manufacturer to the next page in a query
+        NavManager.NavigateTo("/SearchCarModel/?ManufacturerID=" + ManufacturerID + "", true);
+    }
+
+    // Search in table
+    private void SearchChangeEvent(ChangeEventArgs args)
+    {
+        // Get the search value from the textbox
+        SearchValue = args.Value.ToString();
+        // Use Search to filter the displayed list down
+        manufacturersSearchList = manufacturers.Where(manf => manf.Name.ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+
+    // reset serach btn
+    private void reset()
+    {
+        SearchValue = "";
+        manufacturersSearchList = manufacturers.Where(manf => manf.Name.ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+}

@@ -1,0 +1,25 @@
+﻿@page
+@model ErrorModel
+@{
+    ViewData["Title"] = "Error";
+}
+
+<h1 class="text-danger">Error.</h1>
+<h2 class="text-danger">An error occurred while processing your request.</h2>
+
+@if (Model.ShowRequestId)
+{
+    <p>
+        <strong>Request ID:</strong> <code>@Model.RequestId</code>
+    </p>
+}
+
+<h3>Hello</h3>
+<p>
+    <strong>It's the Range Mate team here.</strong>
+</p>
+<p>
+    We are terribly sorry, but the page you requested could not be found. If this problem continues, please contact an administrator and give them the error code above. 
+    <br />
+    <a href="../">Return to the front page by clicking here, and have a nice day.</a>
+</p>

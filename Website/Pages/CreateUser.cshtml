@@ -1,0 +1,9 @@
+﻿@page
+@using Website.Pages.Shared.Componets
+@model Website.Pages.CreateUserModel
+@{
+    ViewData["Title"] = "Create User";
+}
+@{
+}
+@(await Html.RenderComponentAsync<CreateUserRC>(RenderMode.ServerPrerendered))

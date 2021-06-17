@@ -1,0 +1,731 @@
+﻿@using ModelLibrary;
+@using ModelLibrary.Enums
+@using ModelLibrary.DTO;
+@using Services;
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.AspNetCore.Components.Web
+@using Newtonsoft.Json;
+@using System.Security.Claims
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components.Forms
+@inject EcoService EcoService
+@inject EconomySummaryICE EconomySummaryICE
+@inject NavigationManager NavManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAuthorizationService AuthorizationService
+@inject IJSRuntime JSRuntime
+
+<!-- Type 1 table, For petrol and diesel -->
+@if (ViewType == 1 && EcoSummaryICE != null)
+{
+
+    <div class="card text-center mb-2">
+        <div class="card-header cardColor">
+            <div>
+                @if (CarInfo != null)
+                {
+                    <h3>@CarInfo.ManufacturerName @CarInfo.ModelName @CarInfo.EngineName</h3>
+                }
+            </div>
+        </div>
+
+        <!-- table ICE car -->
+        <div class="card-body">
+            <div class="row rowMargin">
+                <table class="table bg-light table-striped shadow" style="border-radius: 0.4em; overflow: hidden;">
+                    <thead class="tablehead">
+                        <tr>
+                            <th scope="col" class="text-center" colspan="1">Average</th>
+                            <th scope="col" class="text-center" colspan="1">City</th>
+                            <th scope="col" class="text-center" colspan="1">Motorway</th>
+                            <th scope="col" class="text-right" colspan="1"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th class="text-center">
+                                Manufacturer Average: <br />
+                                @Math.Round(EcoSummaryICE.Manufacturer_Average, 2) Km/l <br />
+                                @Math.Round(100 / EcoSummaryICE.Manufacturer_Average, 2) L/100Km <br />
+                                @Math.Round(EcoSummaryICE.Manufacturer_Average * 2.82, 2) UK MPG <br />
+                                @Math.Round(EcoSummaryICE.Manufacturer_Average * 2.35, 2) US MPG
+                            </th>
+                            <th class="text-center"> </th>
+                            <th class="text-center"> </th>
+                            <th class="w-10 text-right"><button class="btn btn-outline-secondary" @onclick="() => HelpModal(1)">Help</button></th>
+                        </tr>
+                        <tr>
+                            <th class="text-center">
+                                Reported Average: <br />
+                                @Math.Round(EcoSummaryICE.Reported_Average, 2) Km/l <br />
+                                @Math.Round(100 / EcoSummaryICE.Reported_Average, 2) L/100Km <br />
+                                @Math.Round(EcoSummaryICE.Reported_Average * 2.82, 2) UK MPG <br />
+                                @Math.Round(EcoSummaryICE.Reported_Average * 2.35, 2) US MPG
+                            </th>
+                            <th class="text-center">
+                                Reported City: <br />
+                                @Math.Round(EcoSummaryICE.Reported_City, 2) Km/l <br />
+                                @Math.Round(100 / EcoSummaryICE.Reported_City, 2) L/100Km <br />
+                                @Math.Round(EcoSummaryICE.Reported_City * 2.82, 2) UK MPG <br />
+                                @Math.Round(EcoSummaryICE.Reported_City * 2.35, 2) US MPG
+                            </th>
+                            <th class="text-center">
+                                Reported Motorway: <br />
+                                @Math.Round(EcoSummaryICE.Reported_Motorway, 2) Km/l <br />
+                                @Math.Round(100 / EcoSummaryICE.Reported_Motorway, 2) L/100Km <br />
+                                @Math.Round(EcoSummaryICE.Reported_Motorway * 2.82, 2) UK MPG <br />
+                                @Math.Round(EcoSummaryICE.Reported_Motorway * 2.35, 2) US MPG
+                            </th>
+                            <th class="w-10 text-right"><button class="btn btn-outline-secondary" @onclick="() => HelpModal(2)">Help</button></th>
+                        </tr>
+                        <tr>
+                            <th class="text-center">Discrepancy: <br /> @Math.Round(((EcoSummaryICE.Manufacturer_Average - EcoSummaryICE.Reported_Average) / EcoSummaryICE.Manufacturer_Average) * 100, 2)%</th>
+                            <th class="w-25 text-right"></th>
+                            <th class="w-25 text-right"></th>
+                            <th class="w-10 text-right"><button class="btn btn-outline-secondary" @onclick="() => HelpModal(3)">Help</button></th>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Report security indicator -->
+        <div class="card-body align-items-center row border cardmargin shadow">
+            <p class="card-text col-md-8 offset-md-2">The more reports we get, the more accurate the results <br /> Below you will find our accuracy rating for this car, we consider 50% or more really good.</p>
+            <div class="rounded shadow w-75 h-50 mb-4 @GraphClass card-text col-md-8 offset-md-2 graph-size">
+                <div class=""> @GraphDisplayNumber% </div>
+            </div>
+            <p class="card-text col-md-8 offset-md-2">Total reports: @EcoSummaryICE.Amount_Of_Reports</p>
+        </div>
+        <div class="card-footer text-muted">
+        </div>
+    </div>
+}
+
+<!-- Type 2 Electric -->
+@if (ViewType == 2 && EcoSummaryElectric != null)
+{
+    <div class="card text-center mb-2">
+        <div class="card-header cardColor">
+            <div>
+                @if (CarInfo != null)
+                {
+                    <h3>@CarInfo.ManufacturerName @CarInfo.ModelName @CarInfo.EngineName</h3>
+                }
+            </div>
+        </div>
+
+        <!-- table eletric car-->
+        <div class="card-body">
+            <div class="row rowMargin">
+                <table class="table bg-light table-striped hoverHand" style="border-radius: 0.4em; overflow: hidden;">
+                    <thead class="tablehead">
+                        <tr>
+                            <th scope="col" class="text-center" colspan="1">Range</th>
+                            <th scope="col" class="text-center" colspan="1">Effciency</th>
+                            <th scope="col" class="text-right" colspan="1"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <th class="text-center">Manufacturer Range: <br /> @Math.Round(EcoSummaryElectric.Manufacturer_Full_Range, 2) km <br /> @Math.Round(EcoSummaryElectric.Manufacturer_Full_Range * 0.63, 2) Miles</th>
+                            <th class="text-center">Manufacturer kWh/100km: <br /> @Math.Round(EcoSummaryElectric.Manufacturer_Watt_Hours_Per_100Km, 2)</th>
+                            <th class="w-10 text-right"><button class="btn btn-outline-secondary" @onclick="() => HelpModal(4)">Help</button></th>
+                        </tr>
+                        <tr>
+                            <th class="text-center">Reported Range: <br /> @Math.Round(EcoSummaryElectric.Reported_Full_Range, 2) km <br /> @Math.Round(EcoSummaryElectric.Reported_Full_Range * 0.63, 2) Miles</th>
+                            <th class="text-center">Reported kWh/100km: <br /> @Math.Round(EcoSummaryElectric.Reported_Watt_Hours_Per_100Km, 2)</th>
+                            <th class="w-10 text-right"><button class="btn btn-outline-secondary" @onclick="() => HelpModal(5)">Help</button></th>
+                        </tr>
+                        <tr>
+                            <th class="text-center">Range Discrepancy: <br /> @Math.Round(((EcoSummaryElectric.Manufacturer_Full_Range - EcoSummaryElectric.Reported_Full_Range) / EcoSummaryElectric.Manufacturer_Full_Range) * 100, 2)%</th>
+                            <th class="text-center">kWh/100km Discrepancy: <br /> @Math.Round(((EcoSummaryElectric.Manufacturer_Watt_Hours_Per_100Km - EcoSummaryElectric.Reported_Watt_Hours_Per_100Km) / EcoSummaryElectric.Manufacturer_Watt_Hours_Per_100Km) * 100, 2)%</th>
+                            <th class="w-10 text-right"><button class="btn btn-outline-secondary" @onclick="() => HelpModal(6)">Help</button></th>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Report security indicator -->
+        <div class="card-body align-items-center row border cardmargin shadow">
+            <p class="card-text col-md-8 offset-md-2">The more reports we get, the more accurate the results <br /> Below you will find our accuracy rating for this car, we consider 50% or more really good.</p>
+            <div class="rounded shadow w-75 h-50 mb-4 @GraphClass card-text col-md-8 offset-md-2 graph-size">
+                <div class=""> @GraphDisplayNumber% </div>
+            </div>
+            <p class="card-text col-md-8 offset-md-2">Total reports: @EcoSummaryElectric.Amount_Of_Reports</p>
+        </div>
+        <div class="card-footer text-muted">
+        </div>
+    </div>
+}
+
+<!-- If the engine has no reports yet display a message -->
+@if ((ViewType == 1 || ViewType == 2) && (EcoSummaryElectric == null && EcoSummaryICE == null) && String.IsNullOrEmpty(ErrorMessage))
+{
+    <div class="text-center">
+        @if (CarInfo != null)
+        {
+            <h3>@CarInfo.ManufacturerName @CarInfo.ModelName @CarInfo.EngineName</h3>
+        }
+        <p>This engine has no Economy reports yet, be the first to give your input!</p>
+    </div>
+}
+
+<!-- Add report -->
+@if (Authenticated && LoadReport != false)
+{
+    <div class="card text-center mb-2">
+        <div class="card-header cardColor">
+            Send In Your Report
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">@ReportMessage</h5>
+            <p class="card-text">We collect our information from car owners like you! <br /> It's called crowdsourcing and enables us to make this website free.</p>
+            <button id="ReportBtn" type="button" class="btn btn-success" disabled=@ReportBtnInActive @onclick="OpenReport">Submit Report</button>
+        </div>
+        <div class="card-footer text-muted">
+        </div>
+    </div>
+}
+// Display a please login message, for users not logged in.
+else if (LoadReport != false)
+{
+    <div class="card text-center mb-2">
+        <div class="card-header cardColor">
+            Send In Your Report
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">Login to submit your own report.</h5>
+            <p class="card-text">We collect our information from car owners like you! <br /> It's called crowdsourcing and enables us to make this website free.</p>
+            <a href="#" class="btn btn-success disabled">Submit Report</a>
+        </div>
+        <div class="card-footer text-muted">
+        </div>
+    </div>
+}
+
+<!-- Popup (modal) -->
+<div id="modal" class="modal text-center">
+    <form class="modal-content">
+        <div class="container w-75">
+            @switch (CurrentAction)
+            {
+                case ModalActions.Create:
+
+                    //Report for ICE car
+                    @if (ViewType == 1)
+                    {
+                        <h2> New Report</h2>
+                        <p class="small">Car: <br /> @CarInfo.ManufacturerName @CarInfo.ModelName @CarInfo.EngineName Litre</p>
+                        <p>You can leave the Motorway and City fields empty, but we require a total average. </p>
+                        <label class="small">Select your preferred measurement</label>
+                        <div class="container w-75">
+                            <select class="form-control" @bind="@SelectedMpg">
+                                <option selected="selected" value="Km/l">Km/l</option>
+                                <option value="L/100Km">L/100Km</option>
+                                <option value="US MPG">US MPG</option>
+                                <option value="UK MPG">UK MPG</option>
+                            </select>
+                        </div>
+
+                        <label class="small" for="MotorwayInput">Motorway (Optional)</label>
+                        <div class="input-group mb-1">
+                            <input type="number" min="0" step="0.1" class="form-control" id="MotorwayInput" @bind="ICEReport.Motorway" />
+                            <div class="input-group-append">
+                                <span class="input-group-text" id="inputGroup-sizing-sm">@SelectedMpg</span>
+                            </div>
+                        </div>
+                        <br />
+
+                        <label class="small" for="CityInput">City (Optional)</label>
+                        <div class="input-group mb-1">
+                            <input type="number" min="0" step="0.1" class="form-control" id="CityInput" @bind="ICEReport.City" />
+                            <div class="input-group-append">
+                                <span class="input-group-text" id="inputGroup-sizing-sm">@SelectedMpg</span>
+                            </div>
+                        </div>
+                        <br />
+
+                        <label class="small" for="AverageInput">Average (Required)</label>
+                        <div class="input-group mb-1">
+                            <input type="number" min="0" step="0.1" class="form-control" id="AverageInput" @bind="ICEReport.Average" />
+                            <div class="input-group-append">
+                                <span class="input-group-text" id="inputGroup-sizing-sm">@SelectedMpg</span>
+                            </div>
+                        </div>
+
+                        <br />
+
+                        <!-- Error message -->
+                        <p style="color:red" id="ErrorCode">@ModalErrorMessage</p>
+                        <!-- Buttons -->
+                        <div class="clearfix">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    @onclick="SendReportICE">
+                                Submit
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                    @onclick="HideModal">
+                                Cancel
+                            </button>
+                        </div>
+                        break;
+                    }
+                    // Report for electric car
+                    else if (ViewType == 2)
+                    {
+                        <h2> New Report</h2>
+                        <p>Car: <br /> @CarInfo.ManufacturerName @CarInfo.ModelName @CarInfo.EngineName</p>
+
+                        <label class="small">Select your preferred measurement</label>
+                        <div class="container w-75">
+                            <select class="form-control" @bind="@SelectedMpg">
+                                <option selected="selected" value="Kilometers">Kilometers</option>
+                                <option value="Miles">Miles</option>
+                            </select>
+                        </div>
+                        <br />
+                        <label for="AverageInput">Range On A Full Charge:</label>
+                        <div class="input-group mb-1">
+                            <input type="number" min="0" step="1" class="form-control" id="AverageInput" placeholder="Range In kilometers" @bind="ElectricReport.Full_Range" />
+                            <div class="input-group-append">
+                                <span class="input-group-text" id="inputGroup-sizing-sm">@SelectedMpg</span>
+                            </div>
+                        </div>
+
+                        <br />
+
+                        <!-- Error message -->
+                        <p style="color:red" id="ErrorCode">@ModalErrorMessage</p>
+
+                        <!-- Buttons -->
+                        <div class="clearfix">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    @onclick="SendReportElectric">
+                                Submit
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                    @onclick="HideModal">
+                                Cancel
+                            </button>
+                        </div>
+                        break;
+                    }
+                    break;
+
+                // Modal for help box
+                case ModalActions.Help:
+
+                    <h3>@HelpHeadline</h3>
+                    <br />
+                    <p>@HelpContent</p>
+                    <p class="small">You can read more about fuel economy and how it's measured <a href="../Information">here</a></p>
+                    <button type="button" class="btn btn-sm btn-secondary"
+                            @onclick="HideModal">
+                        Close
+                    </button>
+                    break;
+            }
+        </div>
+    </form>
+</div>
+
+@if (ErrorMessage != null)
+{
+    <p class="text-danger">@ErrorMessage</p>
+}
+
+<!-- Comment Section loads in here from Comment component -->
+
+@code {
+    // On load
+    private string APIAnswer { get; set; }
+    private string APIAnswerCarInfo { get; set; }
+    private EconomySummaryICE EcoSummaryICE { get; set; }
+    private EconomySummaryElectric EcoSummaryElectric { get; set; }
+    private int ViewType { get; set; }
+    private int EngineID { get; set; }
+    private CarInfoObject CarInfo { get; set; }
+    // Modal
+    private ModalActions CurrentAction { get; set; }
+    // Authentication
+    private IEnumerable<Claim> _claims = Enumerable.Empty<Claim>();
+    private AuthenticationState authState { get; set; }
+    private bool Authenticated { get; set; }
+    // Report
+    private bool LoadReport { get; set; } = true;
+    private EconomyReportICE ICEReport { get; set; }
+    private EconomyReportICE ICEReportToSend { get; set; }
+    private EconomyReportElectric ElectricReport { get; set; }
+    private EconomyReportElectric ElectricReportToSend { get; set; }
+    private bool ReportBtnInActive { get; set; }
+    private string ReportMessage { get; set; } = "Click below to share your economy";
+    private string SelectedMpg { get; set; } = "Km/l";
+    // Graph
+    private int GraphReports { get; set; }
+    private string GraphClass { get; set; }
+    private string GraphDisplayNumber { get; set; }
+    // Help
+    private string HelpHeadline { get; set; }
+    private string HelpContent { get; set; }
+    // Error
+    private string ErrorMessage { get; set; }
+    private string ModalErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get engine id from url
+        try
+        {
+            // Query from URL
+            var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("EngineID", out var EngineID) && (QueryHelpers.ParseQuery(uri.Query).TryGetValue("Type", out var type)))
+            {
+                // Tjek if url input is valid
+                if (Int32.TryParse(EngineID, out var parsed))
+                {
+                    this.EngineID = Convert.ToInt32(EngineID);
+                    // Get car information
+                    APIAnswerCarInfo = await EcoService.GetCarInformation(this.EngineID);
+                    CarInfo = JsonConvert.DeserializeObject<CarInfoObject>(APIAnswerCarInfo);
+
+                    // call api on ICE Economy Report
+                    if (type == "1")
+                    {
+                        ViewType = Convert.ToInt32(type);
+                        APIAnswer = await EcoService.GetSummaryICE(Convert.ToInt32(EngineID));
+                        EcoSummaryICE = JsonConvert.DeserializeObject<EconomySummaryICE>(APIAnswer);
+                        if (EcoSummaryICE != null)
+                        {
+                            CalculateGraph(EcoSummaryICE.Amount_Of_Reports);
+                        }
+
+                    }
+                    // call api Electric Economy report
+                    else if (type == "2")
+                    {
+                        ViewType = Convert.ToInt32(type);
+                        APIAnswer = await EcoService.GetSummaryElectric(Convert.ToInt32(EngineID));
+                        EcoSummaryElectric = JsonConvert.DeserializeObject<EconomySummaryElectric>(APIAnswer);
+                        if (EcoSummaryElectric != null)
+                        {
+                            CalculateGraph(EcoSummaryElectric.Amount_Of_Reports);
+                        }
+                    }
+                    // Error Messages
+                    else
+                    {
+                        ErrorMessage = "Type not valid";
+                        LoadReport = false;
+                    }
+                }
+                else
+                {
+                    ErrorMessage = "Engine ID Not valid";
+                }
+            }
+            else
+            {
+                ErrorMessage = "Unknown Error";
+            }
+
+            // Show errors and stop Report from loading.
+            if ((EcoSummaryICE == null && EcoSummaryElectric != null && CarInfo == null) ||
+                (EcoSummaryICE != null && EcoSummaryElectric == null && CarInfo == null) ||
+                (EcoSummaryICE == null && EcoSummaryElectric == null && CarInfo == null))
+            {
+                ErrorMessage = ErrorMessage + "\n Engine not Found";
+                LoadReport = false;
+            }
+
+        }
+        catch (Exception)
+        {
+
+            // If that fails provide API/Database given error message
+            ErrorMessage = APIAnswer;
+        }
+
+        // Check user authetication status
+        authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var CurrentUser = authState.User;
+
+        if (CurrentUser.Identity.IsAuthenticated)
+        {
+            Authenticated = true;
+            _claims = CurrentUser.Claims;
+        }
+    }
+
+    // Modal controls
+    private async Task OpenReport()
+    {
+        if (ViewType == 1)
+        {
+            // Create new report
+            ICEReport = new EconomyReportICE();
+            ICEReport.EngineId = EngineID;
+            ICEReport.UserID = Int32.Parse(authState.User.Claims.FirstOrDefault(x => x.Type == "Id").Value);
+            //Show Report Modal
+            CurrentAction = ModalActions.Create;
+            await JSRuntime.InvokeVoidAsync("showModal");
+        }
+        else if (ViewType == 2)
+        {
+            // Create new report
+            ElectricReport = new EconomyReportElectric();
+            ElectricReport.EngineId = EngineID;
+            ElectricReport.UserID = Int32.Parse(authState.User.Claims.FirstOrDefault(x => x.Type == "Id").Value);
+            //Set select string default value
+            SelectedMpg = "Kilometers";
+            //Show Report Modal
+            CurrentAction = ModalActions.Create;
+            await JSRuntime.InvokeVoidAsync("showModal");
+        }
+    }
+
+    // Runs just after render
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender == true)
+        {
+            await JSRuntime.InvokeVoidAsync("loadModal");
+        }
+    }
+
+    // Hide modal
+    private async Task HideModal()
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal");
+    }
+
+    // Report controls
+    private async Task SendReportICE()
+    {
+        // reset error
+        ModalErrorMessage = "";
+
+        // Create the report obejct
+        ICEReportToSend = new EconomyReportICE();
+        ICEReportToSend.UserID = ICEReport.UserID;
+        ICEReportToSend.EngineId = ICEReport.EngineId;
+        ICEReportToSend.Is_Active = true;
+
+        //convert user input to fit database
+        switch (SelectedMpg)
+        {
+            case "Km/l":
+                // Just set it, this is the database format
+                ICEReportToSend.Average = ICEReport.Average;
+                ICEReportToSend.Motorway = ICEReport.Motorway;
+                ICEReportToSend.City = ICEReport.City;
+                break;
+            case "L/100Km":
+                if (ICEReport.Average != 0)
+                {
+                    ICEReportToSend.Average = 100 / ICEReport.Average;
+                }
+                if (ICEReport.Motorway != 0)
+                {
+                    ICEReportToSend.Motorway = 100 / ICEReport.Motorway;
+                }
+                if (ICEReport.City != 0)
+                {
+                    ICEReportToSend.City = 100 / ICEReport.City;
+                }
+                break;
+            case "US MPG":
+                if (ICEReport.Average != 0)
+                {
+                    ICEReportToSend.Average = (1.609344 / 3.785411784) * ICEReport.Average;
+                }
+                if (ICEReport.Motorway != 0)
+                {
+                    ICEReportToSend.Motorway = (1.609344 / 3.785411784) * ICEReport.Motorway;
+                }
+                if (ICEReport.City != 0)
+                {
+                    ICEReportToSend.City = (1.609344 / 3.785411784) * ICEReport.City;
+                }
+                break;
+            case "UK MPG":
+                if (ICEReport.Average != 0)
+                {
+                    ICEReportToSend.Average = (1.609344 / 4.54609) * ICEReport.Average;
+                }
+                if (ICEReport.Motorway != 0)
+                {
+                    ICEReportToSend.Motorway = (1.609344 / 4.54609) * ICEReport.Motorway;
+                }
+                if (ICEReport.City != 0)
+                {
+                    ICEReportToSend.City = (1.609344 / 4.54609) * ICEReport.City;
+                }
+                break;
+            default:
+                break;
+        }
+
+        string result = await EcoService.CreateICEReport(ICEReportToSend);
+
+        // Check for error messages from database
+        if (result == "The Average is considered unrealistic")
+        {
+            ModalErrorMessage = "The Average you have entered, has been flagged by the system as being unrealistic.\nPlease check your inputs and try again.";
+        }
+        else if (result == "The Motorway considered unrealistic")
+        {
+            ModalErrorMessage = "The Motorway number you have entered, has been flagged by the system as being unrealistic.\nPlease check your inputs and try again.";
+        }
+        else if (result == "The City considered unrealistic")
+        {
+            ModalErrorMessage = "The City number you have entered, has been flagged by the system as being unrealistic.\nPlease check your inputs and try again.";
+        }
+
+        // Else save report
+        else if (result == "First Report")
+        {
+            ReportMessage = "Thank you. This is the first report for this Engine!";
+            await JSRuntime.InvokeVoidAsync("hideModal");
+            // Set report button
+            ReportBtnInActive = true;
+            // Update page content
+            await OnInitializedAsync();
+        }
+        else if (result == "Report added")
+        {
+            ReportMessage = "Thank you. Your report has been added!";
+            await JSRuntime.InvokeVoidAsync("hideModal");
+            // Set report button
+            ReportBtnInActive = true;
+            // Update page content
+            await OnInitializedAsync();
+        }
+        else
+        {
+            ReportMessage = result;
+        }
+
+    }
+
+    // Send report electric car
+    private async Task SendReportElectric()
+    {
+        // Create object for database
+        ElectricReportToSend = new EconomyReportElectric();
+        ElectricReportToSend.UserID = Int32.Parse(authState.User.Claims.FirstOrDefault(x => x.Type == "Id").Value);
+        ElectricReportToSend.EngineId = ElectricReport.EngineId;
+        ElectricReportToSend.Is_Active = true;
+        ElectricReportToSend.Full_Range = ElectricReport.Full_Range;
+
+        // If miles selected convert to kilometers
+        if (ElectricReport.Full_Range != 0)
+        {
+            if (SelectedMpg == "Miles")
+            {
+                ElectricReportToSend.Full_Range = ElectricReport.Full_Range * 1.63;
+            }
+        }
+
+        string result = await EcoService.CreateElectricReport(ElectricReportToSend);
+
+        // Error / information messages to user, when sending reports
+        if (result == "Number is considered unrealistic")
+        {
+            ModalErrorMessage = "A number you have entered, has been flagged by the system as being unrealistic.\nPlease check your inputs and try again.";
+        }
+        else if (result == "First Report")
+        {
+            ReportMessage = "Thank you. This is the first report for this variant!";
+            await JSRuntime.InvokeVoidAsync("hideModal");
+            // Set report button
+            ReportBtnInActive = true;
+            // Update page content
+            await OnInitializedAsync();
+        }
+        else if (result == "Report added")
+        {
+            ReportMessage = "Thank you. Your report has been added!";
+            await JSRuntime.InvokeVoidAsync("hideModal");
+            // Set report button
+            ReportBtnInActive = true;
+            // Update page content
+            await OnInitializedAsync();
+        }
+        // Else print an error from API or database
+        else
+        {
+            ReportMessage = result;
+        }
+
+    }
+
+    // helper method to create the graph
+    // this generates the CSS class name, which changes the graph progress
+    private void CalculateGraph(int reports)
+    {
+        if (reports <= 10)
+        {
+            GraphClass = "graph" + reports + "0";
+            GraphDisplayNumber = reports + "0";
+        }
+        else
+        {
+            GraphClass = "graph100";
+            GraphDisplayNumber = "100";
+        }
+    }
+
+    //Fills out and loads the help modal
+    private async Task HelpModal(int helpContent)
+    {
+        switch (helpContent)
+        {
+            case 1:
+                HelpHeadline = "Manufacturers Claimed Economy Numbers";
+                HelpContent = "This row displays the manufacturers own economy numbers. These numbers are rarely achievable in real life, as the cars are tested by the manufacturers themselves";
+                CurrentAction = ModalActions.Help;
+                await JSRuntime.InvokeVoidAsync("showModal");
+                break;
+            case 2:
+                HelpHeadline = "Reported Numbers from owners";
+                HelpContent = "This row displays the economy numbers from real owners of this car. " +
+                        "We also give owners the opportunity to provide their own numbers for City and Motorway driving. That way you can see if this car is right for your commute.";
+                CurrentAction = ModalActions.Help;
+                await JSRuntime.InvokeVoidAsync("showModal");
+                break;
+            case 3:
+                HelpHeadline = "Discrepancy";
+                HelpContent = "Here we have calculated the discrepancy between the claimed economy and the actual economy. The average discrepancy on petrol cars is around 18%.";
+                CurrentAction = ModalActions.Help;
+                await JSRuntime.InvokeVoidAsync("showModal");
+                break;
+            case 4:
+                HelpHeadline = "Manufacturers Claimed Range";
+                HelpContent = "This row displays the manufacturers claimed range. The validity of these numbers vary depending on the manufacturer, as well as where it is driven and on some electric cars the battery age.";
+                CurrentAction = ModalActions.Help;
+                await JSRuntime.InvokeVoidAsync("showModal");
+                break;
+            case 5:
+                HelpHeadline = "Reported Numbers from owners";
+                HelpContent = "This row displays the economy numbers from real owners of this car.";
+                CurrentAction = ModalActions.Help;
+                await JSRuntime.InvokeVoidAsync("showModal");
+                break;
+            case 6:
+                HelpHeadline = "Discrepancy";
+                HelpContent = "Here we have calculated the discrepancy between the claimed range and the actual range.";
+                CurrentAction = ModalActions.Help;
+                await JSRuntime.InvokeVoidAsync("showModal");
+                break;
+            default:
+                break;
+        }
+    }
+
+}

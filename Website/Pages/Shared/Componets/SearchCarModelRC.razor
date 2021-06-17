@@ -1,0 +1,145 @@
+﻿@using ModelLibrary;
+@using Services;
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.AspNetCore.Components.Web
+@using Newtonsoft.Json;
+@inject SearchService SearchService
+@inject Model model
+@inject NavigationManager NavManager
+
+<!-- Page information -->
+<section class="jumbotron text-center bg-white" style="padding: 1rem 0.5rem; margin-bottom: 0rem;">
+    <div class="container">
+        @if (ManufacturerSelected != null)
+        {
+            <h2 class="jumbotron-heading">Find Your @ManufacturerSelected.Name</h2>
+        }
+    </div>
+</section>
+
+<!-- Search -->
+<div class="container">
+    <div class="row">
+        <div class="col-xs-6">
+            <div class="input-group mb-1">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="inputGroup-sizing-sm">Search</span>
+                </div>
+                <input class="form-control" type="search" placeholder="Find Your Model Here..."
+                       value="@SearchValue" @oninput="SearchChangeEvent">
+            </div>
+        </div>
+        <div class="col-xs-6 ml-2">
+            <button class="btn btn-success" type="button" @onclick="() => { reset(); }">Reset</button>
+        </div>
+    </div>
+    <div class="row">
+        <table id="modelTable" class="table bg-light table-hover table-striped hoverHand" style="border-radius: 0.4em; overflow: hidden;">
+            <thead class="tablehead">
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Year</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (modelsSearchList != null)
+                {
+                    @foreach (Model model in modelsSearchList)
+                    {
+                        <tr @onclick="() => SelectModel(model.Id)">
+                            <td>@model.ModelName</td>
+                            <td>@model.Year</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Error message -->
+@if (ErrorMessage != null)
+{
+    <p class="text-danger">@ErrorMessage</p>
+}
+
+@code {
+    private string APIAnswer { get; set; }
+    private string APIAnswerManufacturer { get; set; }
+    private Manufacturer ManufacturerSelected { get; set; }
+    private List<Model> models { get; set; }
+    private List<Model> modelsSearchList { get; set; }
+    private string SearchValue { get; set; }
+    private string ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        try
+        {
+            // Query from URL
+            var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ManufacturerID", out var ManufacturerID))
+            {
+                // Tjek if url input is valid
+                if (Int32.TryParse(ManufacturerID, out var parsed))
+                {
+                    // Get search results
+                    await GetManufacturer(Convert.ToInt32(ManufacturerID));
+                    APIAnswer = await SearchService.GetModelList(Convert.ToInt32(ManufacturerID));
+                    models = JsonConvert.DeserializeObject<List<Model>>(APIAnswer);
+                    modelsSearchList = models;
+                }
+            }
+
+            // If nothing found provide error message
+            if (models == null || models.Count == 0)
+            {
+                ErrorMessage = "No Models found for this manufacturer.";
+            }
+        }
+        catch (Exception)
+        {
+
+            // If that fails provide given error message
+            ErrorMessage = APIAnswer;
+        }
+
+    }
+
+    // get manufacturer information
+    private async Task GetManufacturer(int ManufacturerID)
+    {
+        try
+        {
+            APIAnswerManufacturer = await SearchService.GetManufacturer(ManufacturerID);
+            ManufacturerSelected = JsonConvert.DeserializeObject<List<Manufacturer>>(APIAnswerManufacturer)[0];
+        }
+        catch (Exception)
+        {
+            ErrorMessage = APIAnswerManufacturer;
+        }
+    }
+
+    // Onclick get model ID and send to next page in query
+    private void SelectModel(int ModelID)
+    {
+        NavManager.NavigateTo("/SearchCarEngine/?ModelID=" + ModelID + "", true);
+    }
+
+    // Search in table
+    private void SearchChangeEvent(ChangeEventArgs args)
+    {
+        // Get the search value from the textbox
+        SearchValue = args.Value.ToString();
+        // Use Search to filter the displayed list down
+        modelsSearchList = models.Where(model => model.ModelName.ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+
+    // reset serach btn
+    private void reset()
+    {
+        SearchValue = "";
+        modelsSearchList = models.Where(model => model.ModelName.ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+}

@@ -1,0 +1,589 @@
+﻿@using ModelLibrary;
+@using Website.Services;
+@using Microsoft.AspNetCore.Components.Web
+@using ModelLibrary.Enums
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.WebUtilities
+@using Newtonsoft.Json;
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inject Engine Engine
+@inject SearchService SearchService
+@inject EngineServices EngineServices
+@inject NavigationManager NavManager
+
+<h3 class="text-center">Admin Tools - Manufacturer: @ManufactuerName - Model: @ModelName - Search Car Engine</h3>
+
+<div class="col-xs-3 text-center responsive-width-btn">
+    <section class="btn-group float-left">
+        <div>
+            <input class="p-0 my-lg-0 align-self-center form-control" type="search" placeholder="Search Engine"
+                   value="@SearchValue" @oninput="SearchChangeEvent">
+        </div>
+    </section>
+    <p class="text-danger btn-group">@ErrorMessage</p>
+
+    <button class="btn btn-group btn-success float-right" type="button" @onclick="ShowCreateModal">
+        Create ICE
+    </button>
+</div>
+@*ICE Section*@
+<div class="responsive-table">
+    <div class="row">
+        <table id="EngineTable" class="table table-hover hoverHand bg-light responsive-width">
+            <thead>
+                <tr>
+                    <th scope="col">Type</th>
+                    <th scope="col">Size</th>
+                    <th scope="col">Fuel</th>
+                    <th scope="col">WLTP (Km/l)</th>
+                    <th scope="col">NEDC (Km/l)</th>
+                    <th scope="col">Is Electric</th>
+                    <th scope="col">Edit</th>
+                    <th scope="col">Active</th>
+                </tr>
+            </thead>
+            @if (Is_ICE)
+            {
+
+                <tbody>
+
+                    @if (EnginesSearchList != null)
+                    {
+                        @foreach (Engine engine in EnginesSearchList)
+                        {
+                            if (engine.Is_Electric == false)
+                            {
+                                <tr class="@(engine.Is_Active == false ? " btn-danger" : "")">
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.Type</td>
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.Size</td>
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.Fuel</td>
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.WLTP</td>
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.NEDC</td>
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.Is_Electric</td>
+                                    <td><Button class="btn btn-sm btn-success" @onclick="() => ShowUpdateModal(engine)">Edit</Button></td>
+                                    <td>
+                                        <Button class="btn btn-sm btn-success" @onclick="() => DeactivateAndActivate(engine)">
+                                            @if (engine.Is_Active == false)
+                                            {
+                                                <span class="text-in-button">&nbsp; Activate &nbsp;</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Deactivate</span>
+                                            }
+                                        </Button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                </tbody>
+            }
+        </table>
+    </div>
+</div>
+@*Electric Section*@
+<div class="col-xs-3 text-center" style="height:40px;">
+
+    <button class="btn btn-group btn-success float-right responsive-width-btn" type="button" @onclick="ShowInsertModal">
+        Create Electric
+    </button>
+</div>
+<div class="responsive-table">
+    <div class="row">
+        <table id="ElectricTable" class="table table-hover hoverHand bg-light responsive-width">
+            <thead>
+                <tr>
+                    <th scope="col">Type</th>
+                    <th scope="col">Battery</th>
+                    <th scope="col">Battery Size</th>
+                    <th scope="col">WLTP Range</th>
+                    <th scope="col">kWh/ 100 km</th>
+                    <th scope="col">Is Electric</th>
+                    <th scope="col">Edit</th>
+                    <th scope="col">Active</th>
+                </tr>
+            </thead>
+            @if (Is_Electric)
+            {
+                <tbody>
+                    @if (EnginesSearchList != null)
+                    {
+                        @foreach (Engine engine in EnginesSearchList)
+                        {
+                            if (engine.Is_Electric == true)
+                            {
+                                <tr class="@(engine.Is_Active == false ? " btn-danger" : "")">
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.Fuel</td>
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.Type</td>
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.Size kWh</td>
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.WLTP km</td>
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.Watt_Hours_Per_KM</td>
+                                    <td @onclick="() => SelectEngine(engine.Id, engine.Is_Electric, engine.Type)">@engine.Is_Electric</td>
+                                    <td><Button class="btn btn-sm btn-success" @onclick="() => ShowEditModal(engine)">Edit</Button></td>
+                                    <td>
+                                        <Button class="btn btn-sm btn-success" @onclick="() => DeactivateAndActivate(engine)">
+                                            @if (engine.Is_Active == false)
+                                            {
+                                                <span class="text-in-button">&nbsp; Activate &nbsp;</span>
+                                            }
+                                            else
+                                            {
+                                                <span>Deactivate</span>
+                                            }
+                                        </Button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                    }
+                </tbody>
+            }
+        </table>
+    </div>
+    </div>
+    <div id="modal" class="modal text-center">
+        <form class="modal-content">
+            <div class="container">
+                @switch (CurrentAction)
+                {
+
+                    case ModalActions.Update:
+                        <h3 class="text-center form-signin">Update Car Engine</h3>
+                        <EditForm method="post" EditContext="@EC" class="text-center justify-content-center form-signin">
+                            <DataAnnotationsValidator />
+                            <div class="form-group row">
+                                <label for="EngineType" class="col-sm-2 col-form-label">Engine Type</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EngineType" placeholder="Type" @bind-value="Engine.Type" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineSize" class="col-sm-2 col-form-label">Engine Size</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EngineSize" placeholder="Size" @bind-value="Engine.Size" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineFuel" class="col-sm-2 col-form-label">Engine Fuel</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EngineFuel" placeholder="Fuel" @bind-value="Engine.Fuel" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineWLTP" class="col-sm-2 col-form-label">Engine WLTP</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="number" id="EngineWLTP" placeholder="WLTP" @bind-value="Engine.WLTP" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineNEDC" class="col-sm-2 col-form-label">Engine NEDC</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="number" id="EngineNEDC" placeholder="NEDC" @bind-value="Engine.NEDC" />
+                                </div>
+                            </div>
+                            <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                        </EditForm>
+
+                        <div class="clearfix">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    @onclick="() => UpdateEngine(Engine)">
+                                Update
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                    @onclick="HideModal">
+                                Close
+                            </button>
+                        </div>
+                        <p style="color:red" id="ErrorCode">@ModalError</p>
+                        break;
+
+
+                    case ModalActions.Create:
+                        <h3 class="text-center form-signin">Create Car Engine</h3>
+                        <EditForm method="post" EditContext="@EC" class="text-center justify-content-center form-signin">
+                            <DataAnnotationsValidator />
+
+                            <div class="form-group row">
+                                <label for="EngineType" class="col-sm-2 col-form-label">Engine Type</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EngineType" placeholder="Type" @bind-value="Engine.Type" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineSize" class="col-sm-2 col-form-label">Engine Size</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EngineSize" placeholder="Size" @bind-value="Engine.Size" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineFuel" class="col-sm-2 col-form-label">Engine Fuel</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EngineFuel" placeholder="Fuel" @bind-value="Engine.Fuel" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineWLTP" class="col-sm-2 col-form-label">Engine WLTP</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="number" id="EngineWLTP" placeholder="WLTP" @bind-value="Engine.WLTP" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineNEDC" class="col-sm-2 col-form-label">Engine NEDC</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="number" id="EngineNEDC" placeholder="NEDC" @bind-value="Engine.NEDC" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineIs_Active" class="col-sm-2 col-form-label">Engine Active</label>
+                                <div class="col-sm-4">
+                                    <input class="form-control w-25" type="checkbox" id="EngineIs_Active" placeholder="Active" @bind-value="Engine.Is_Active" />
+                                </div>
+                            </div>
+                            <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                        </EditForm>
+
+                        <div class="clearfix">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    @onclick="CreateEngine">
+                                Create
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                    @onclick="HideModal">
+                                Close
+                            </button>
+                        </div>
+                        <p style="color:red" id="ErrorCode">@ModalError</p>
+                        break;
+
+                    case ModalActions.Edit:
+                        <h3 class="text-center form-signin">Update Car Engine</h3>
+                        <EditForm method="post" EditContext="@EC" class="text-center justify-content-center form-signin">
+                            <DataAnnotationsValidator />
+                            <div class="form-group row">
+                                <label for="EngineType" class="col-sm-2 col-form-label">Engine Type</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EngineType" placeholder="Type" @bind-value="Engine.Type" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="BatterySize" class="col-sm-2 col-form-label">Battery Size</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="number" id="BatterySize" placeholder="Size" @bind-value="Engine.Size" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineFullRange" class="col-sm-2 col-form-label">Full Range</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="number" id="EngineFullRange" placeholder="WLTP" @bind-value="Engine.WLTP" />
+                                </div>
+                            </div>
+                            <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                        </EditForm>
+
+                        <div class="clearfix">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    @onclick="() => UpdateEngine(Engine)">
+                                Update
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                    @onclick="HideModal">
+                                Close
+                            </button>
+                        </div>
+                        <p style="color:red" id="ErrorCode">@ModalError</p>
+                        break;
+
+
+                    case ModalActions.Insert:
+                        <h3 class="text-center form-signin">Create Car Engine</h3>
+                        <EditForm method="post" EditContext="@EC" class="text-center justify-content-center form-signin">
+                            <DataAnnotationsValidator />
+                            <div class="form-group row">
+                                <label for="EngineType" class="col-sm-2 col-form-label">Engine Type</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EngineType" placeholder="Type" @bind-value="Engine.Type" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="BatterySize" class="col-sm-2 col-form-label">Battery Size</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="number" min="1" id="BatterySize" placeholder="Size" @bind-value="Engine.Size" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineFullRange" class="col-sm-2 col-form-label">Full Range</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="number" id="EngineFullRange" placeholder="WLTP" @bind-value="Engine.WLTP" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EngineIs_Active" class="col-sm-2 col-form-label">Engine Active</label>
+                                <div class="col-sm-10 small">
+                                    <input class="form-control" type="checkbox" id="EngineIs_Active" placeholder="Active" @bind-value="Engine.Is_Active" />
+                                </div>
+                            </div>
+
+                            <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                        </EditForm>
+
+                        <div class="clearfix">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    @onclick="CreateEngine">
+                                Create
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                    @onclick="HideModal">
+                                Close
+                            </button>
+                        </div>
+                        <p style="color:red" id="ErrorCode">@ModalError</p>
+                        break;
+
+                }
+            </div>
+        </form>
+    </div>
+
+    @code {
+
+        // Used to decide what the modal will show
+        public ModalActions CurrentAction { get; set; }
+        public string ModalError { get; set; }
+
+        public Engine SelectedEngine { get; set; }
+
+        public int ModelIDFromLastPage { get; set; }
+        private string ManufactuerName { get; set; }
+        private string ModelName { get; set; }
+
+        public string APIAnswer { get; set; }
+        public string ErrorMessage { get; set; }
+
+        private bool Is_ICE { get; set; }
+        private bool Is_Electric { get; set; }
+
+        //Used for modals.
+        private EditContext EC;
+
+        public List<Engine> Engines { get; set; }
+        public List<Engine> EnginesSearchList { get; set; }
+        public string SearchValue { get; set; }
+
+        protected override async Task OnAfterRenderAsync(bool firstRender)
+        {
+            if (firstRender == true)
+            {
+                await JSRuntime.InvokeVoidAsync("loadModal");
+            }
+        }
+
+        protected override void OnInitialized()
+        {
+            //Name for editform with a user obejct in it, so valdation can be done.
+            EC = new EditContext(Engine);
+            base.OnInitialized();
+        }
+
+        protected override async Task OnInitializedAsync()
+        {
+            var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ModelID", out var ModelID) && (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ManufactuerName", out var ManufactuerNameFromLastPage) && (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ModelName", out var ModelNameFromLastPage))))
+            {
+                ModelIDFromLastPage = Convert.ToInt32(ModelID);
+                ManufactuerName = ManufactuerNameFromLastPage;
+                ModelName = ModelNameFromLastPage;
+                await GetEngineList(ModelIDFromLastPage);
+                TypeChecker();
+            }
+            else
+            {
+                ErrorMessage = "No Modal ID From Last Page.";
+            }
+        }
+
+        public async Task GetEngineList(int ModelID)
+        {
+            APIAnswer = await EngineServices.GetEngineListAdmin(ModelID);
+            try
+            {
+                Engines = JsonConvert.DeserializeObject<List<Engine>>(APIAnswer);
+                EnginesSearchList = Engines;
+                if (EnginesSearchList.Count == 0)
+                {
+                    ErrorMessage = "Engine List Is Empty";
+                }
+            }
+            catch (Exception)
+            {
+                ErrorMessage = APIAnswer;
+            }
+        }
+
+        public void SelectEngine(int EngineID, bool IsElectric, string Type)
+        {
+            // Send the selected manufacturer to the next page in a query
+            NavManager.NavigateTo("/AdminSearchEconomyReports/?EngineID=" + EngineID + "&IsElectric=" + IsElectric + "&ManufactuerName=" + ManufactuerName + "&ModelName=" + ModelName + "&EngineType=" + Type, true);
+        }
+
+        private void SearchChangeEvent(ChangeEventArgs args)
+        {
+            // Get the search value from the textbox
+            SearchValue = args.Value.ToString();
+            // Use Search to filter the displayed list down
+            EnginesSearchList = Engines.Where(engi => engi.Type.ToLower().Contains(SearchValue.ToLower())).ToList();
+        }
+
+        private async Task CreateEngine()
+        {
+            if (CurrentAction == ModalActions.Insert)
+            {
+                Engine.Fuel = "Electric";
+                Engine.Is_Electric = true;
+            }
+            if (EC.Validate())
+            {
+                try
+                {
+                    Engine.ModelId = ModelIDFromLastPage;
+                    ModalError = await EngineServices.CreateEngine(Engine);
+                    await GetEngineList(ModelIDFromLastPage);
+                    TypeChecker();
+                }
+                catch (Exception)
+                {
+                    ModalError = "Uknown Error";
+                }
+                StateHasChanged();
+            }
+        }
+
+        private async Task UpdateEngine(Engine engine)
+        {
+            if (EC.Validate())
+            {
+                try
+                {
+                    ModalError = await EngineServices.UpdateEngine(engine);
+                }
+                catch (Exception)
+                {
+                    ModalError = "Uknown Error";
+                }
+                await GetEngineList(ModelIDFromLastPage);
+                StateHasChanged();
+            }
+        }
+
+        private async Task DeactivateAndActivate(Engine engine)
+        {
+            if (engine.Is_Active == false)
+            {
+                engine.Is_Active = true;
+            }
+            else
+            {
+                engine.Is_Active = false;
+            }
+            try
+            {
+                ErrorMessage = await EngineServices.UpdateEngine(engine);
+            }
+            catch (Exception)
+            {
+                ErrorMessage = "Uknown Error";
+            }
+            await GetEngineList(ModelIDFromLastPage);
+            StateHasChanged();
+        }
+
+        // Check the type of engine
+        private void TypeChecker()
+        {
+            var IsICE = EnginesSearchList.Find(x => x.Is_Electric == false);
+            var IsElectric = EnginesSearchList.Find(x => x.Is_Electric == true);
+            if (IsICE != null)
+            {
+                Is_ICE = true;
+            }
+
+            if (IsElectric != null)
+            {
+                Is_Electric = true;
+            }
+        }
+
+        private async Task ShowUpdateModal(Engine engine)
+        {
+            Engine.Id = engine.Id;
+            Engine.Type = engine.Type;
+            Engine.Size = engine.Size;
+            Engine.Fuel = engine.Fuel;
+            Engine.WLTP = engine.WLTP;
+            Engine.NEDC = engine.NEDC;
+            Engine.Watt_Hours_Per_KM = engine.Watt_Hours_Per_KM;
+            Engine.Is_Active = engine.Is_Active;
+            Engine.Is_Electric = engine.Is_Electric;
+            ClearErrorText();
+            CurrentAction = ModalActions.Update;
+            await JSRuntime.InvokeVoidAsync("showModal");
+        }
+
+        private async Task ShowCreateModal()
+        {
+            ClearErrorText();
+            ClearInput();
+            CurrentAction = ModalActions.Create;
+            await JSRuntime.InvokeVoidAsync("showModal");
+        }
+
+        private async Task ShowEditModal(Engine engine)
+        {
+            Engine.Id = engine.Id;
+            Engine.Type = engine.Type;
+            Engine.Size = engine.Size;
+            Engine.Fuel = engine.Fuel;
+            Engine.WLTP = engine.WLTP;
+            Engine.NEDC = engine.NEDC;
+            Engine.Watt_Hours_Per_KM = engine.Watt_Hours_Per_KM;
+            Engine.Is_Active = engine.Is_Active;
+            Engine.Is_Electric = engine.Is_Electric;
+            ClearErrorText();
+            CurrentAction = ModalActions.Edit;
+            await JSRuntime.InvokeVoidAsync("showModal");
+        }
+
+        private async Task ShowInsertModal()
+        {
+            ClearErrorText();
+            ClearInput();
+            CurrentAction = ModalActions.Insert;
+            await JSRuntime.InvokeVoidAsync("showModal");
+        }
+
+        private async Task HideModal()
+        {
+            await JSRuntime.InvokeVoidAsync("hideModal");
+            ClearErrorText();
+        }
+
+        private void ClearErrorText()
+        {
+            ModalError = "";
+            ErrorMessage = "";
+            EC = new EditContext(Engine);
+        }
+
+        private void ClearInput()
+        {
+            Engine.Type = "";
+            Engine.Size = "";
+            Engine.Fuel = "";
+            Engine.WLTP = 0;
+            Engine.NEDC = 0;
+            Engine.Watt_Hours_Per_KM = "";
+            Engine.Is_Active = false;
+            Engine.Is_Electric = false;
+        }
+    }

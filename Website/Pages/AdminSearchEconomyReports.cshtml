@@ -1,0 +1,15 @@
+﻿@page
+@using Website.Pages.Shared.Componets
+@model Website.Pages.AdminSearchEconomyReportsModel
+@{
+    ViewData["Title"] = "Admin Search Economy Report";
+}
+@{
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/modal.css" />
+}
+@(await Html.RenderComponentAsync<AdminSearchEconomyReportsRC>(RenderMode.ServerPrerendered))
+@section Scripts {
+    <script src="~/js/modal.js" asp-append-version="true"></script>
+}

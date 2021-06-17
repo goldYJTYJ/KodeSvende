@@ -1,0 +1,602 @@
+﻿@using ModelLibrary;
+@using Website.Services;
+@using Microsoft.AspNetCore.Components.Web
+@using ModelLibrary.Enums
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.WebUtilities
+@using System.Net.Http;
+@using Newtonsoft.Json;
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inject EconomyReportICE EconomyReportICE
+@inject EconomyReportElectric EconomyReportElectric
+@inject EcoService EcoService
+@inject SearchService SearchService
+@inject ManufacturerServices ManufacturerServices
+@inject NavigationManager NavManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3 class="text-center">Admin Tools - Manufacturer: @ManufactuerName - Model: @ModelName - Engine: @EngineType - Search Economy Reports</h3>
+
+@if (EngineBoolIsElectricFromLastPage == false)
+{
+    <div class="col-xs-3 text-center" style="height: 40px; margin-right: -15px; margin-left: -15px;">
+        <section class="btn-group float-left">
+            <div>
+                <input class="p-0 my-lg-0 align-self-center form-control" type="search" placeholder="Search Report"
+                       value="@SearchValue" @oninput="SearchChangeEventIRC">
+            </div>
+        </section>
+
+        <p class="text-danger btn-group">@ErrorMessage</p>
+
+        <button class="btn btn-group btn-success float-right" type="button" @onclick="ShowCreateModalEconomyReport">
+            Create Economy Report
+        </button>
+    </div>
+
+    <div class="row">
+        <table id="EconomyReportICETable" class="table table-hover hoverHand bg-light">
+            <thead>
+                <tr>
+                    <th scope="col">Motorway</th>
+                    <th scope="col">City</th>
+                    <th scope="col">Average</th>
+                    <th scope="col">Edit</th>
+                    <th scope="col">Active</th>
+                    <th scope="col">User</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (EconomyReportICEsSearchList != null)
+                {
+                    @foreach (EconomyReportICE economyreportICE in EconomyReportICEsSearchList)
+                    {
+                        <tr class="@(economyreportICE.Is_Active == false ? " btn-danger" : "")">
+                            <td>@economyreportICE.Motorway</td>
+                            <td>@economyreportICE.City</td>
+                            <td>@economyreportICE.Average</td>
+                            <td><Button class="btn btn-sm btn-success" @onclick="() => ShowUpdateModalEconomyReportICE(economyreportICE)">Edit</Button></td>
+                            <td><Button class="btn btn-sm btn-success" @onclick="() => DeactivateAndActivateEconomyReportICE(economyreportICE)">
+                                    @if (economyreportICE.Is_Active == false)
+                                    {
+                                        <span class="text-in-button">&nbsp; Activate &nbsp;</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Deactivate</span>
+                                    }
+                                </Button>
+                            </td>
+                            <td><Button class="btn btn-sm btn-success" @onclick="() => SelectUser(economyreportICE.UserID)">Go To User</Button></td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+
+    <div id="modal" class="modal text-center">
+        <form class="modal-content">
+            <div class="container">
+                @switch (CurrentAction)
+                {
+                    case ModalActions.Update:
+                        <h3 class="text-center form-signin">Update Report</h3>
+                        <EditForm method="post" EditContext="@ECice" class="text-center justify-content-center form-signin">
+                            <DataAnnotationsValidator />
+                            <div class="form-group row">
+                                <label for="EconomyReportICEMotorway" class="col-sm-2 col-form-label">EconomyReportICE Motorway</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EconomyReportICEMotorway" placeholder="Motorway" @bind-value="EconomyReportICE.Motorway" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EconomyReportICECity" class="col-sm-2 col-form-label">EconomyReportICE City</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EconomyReportICECity" placeholder="City" @bind-value="EconomyReportICE.City" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EconomyReportICEAverage" class="col-sm-2 col-form-label">EconomyReportICE Average</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EconomyReportICEAverage" placeholder="Average" @bind-value="EconomyReportICE.Average" />
+                                </div>
+                            </div>
+                            <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                        </EditForm>
+
+                        <div class="clearfix">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    @onclick="UpdateEconomyReportICE">
+                                Update
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                    @onclick="HideModal">
+                                Close
+                            </button>
+                        </div>
+                        <p style="color:red" id="ErrorCode">@ModalError</p>
+                        break;
+
+
+                    case ModalActions.Create:
+                        <h3 class="text-center form-signin">Create Report</h3>
+                        <EditForm method="post" EditContext="@ECice" class="text-center justify-content-center form-signin">
+                            <DataAnnotationsValidator />
+                            <div class="form-group row">
+                                <label for="EconomyReportICEMotorway" class="col-sm-2 col-form-label">EconomyReportICE Motorway</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EconomyReportICEMotorway" placeholder="Motorway" @bind-value="EconomyReportICE.Motorway" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EconomyReportICECity" class="col-sm-2 col-form-label">EconomyReportICE City</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EconomyReportICECity" placeholder="City" @bind-value="EconomyReportICE.City" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EconomyReportICEAverage" class="col-sm-2 col-form-label">EconomyReportICE Average</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EconomyReportICEAverage" placeholder="Average" @bind-value="EconomyReportICE.Average" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EconomyReportICEIs_Active" class="col-sm-2 col-form-label">EconomyReportICE Active</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="checkbox" id="EconomyReportICEIs_Active" placeholder="Active" @bind-value="EconomyReportICE.Is_Active" />
+                                </div>
+                            </div>
+
+                            <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                        </EditForm>
+
+                        <div class="clearfix">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    @onclick="CreateEconomyReportICE">
+                                Create
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                    @onclick="HideModal">
+                                Close
+                            </button>
+                        </div>
+                        <p style="color:red" id="ErrorCode">@ModalError</p>
+                        break;
+                }
+            </div>
+        </form>
+    </div>
+}
+else if (EngineBoolIsElectricFromLastPage == true)
+{
+    <div class="col-xs-3 text-center" style="height: 40px; margin-right: -15px; margin-left: -15px;">
+        <section class="btn-group float-left">
+            <div>
+                <input class="p-0 my-lg-0 align-self-center form-control" type="search" placeholder="Search Report"
+                       value="@SearchValue" @oninput="SearchChangeEventElectric">
+            </div>
+            <p class="text-danger btn-group">@ErrorMessage</p>
+        </section>
+        <button class="btn btn-group btn-success float-right" type="button" @onclick="ShowCreateModalEconomyReport">
+            Create Economy Report
+        </button>
+    </div>
+
+    <div class="row">
+        <table id="EconomyReportElectricTable" class="table table-hover hoverHand bg-light">
+            <thead>
+                <tr>
+                    <th scope="col">Full Range</th>
+                    <th scope="col">Edit</th>
+                    <th scope="col">Active</th>
+                    <th scope="col">User</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (EconomyReportElectricsSearchList != null)
+                {
+                    @foreach (EconomyReportElectric economyreportElectric in EconomyReportElectricsSearchList)
+                    {
+                    <tr class="@(economyreportElectric.Is_Active == false ? " btn-danger" : "")">
+                        <td>@economyreportElectric.Full_Range</td>
+                        <td><Button class="btn btn-sm btn-success" @onclick="() => ShowUpdateModalEconomyReportElectric(economyreportElectric)">Edit</Button></td>
+                        <td><Button class="btn btn-sm btn-success" @onclick="() => DeactivateAndActivateEconomyReportElectric(economyreportElectric)">
+                                @if (economyreportElectric.Is_Active == false)
+                                {
+                                    <span class="text-in-button">&nbsp; Activate &nbsp;</span>
+                                }
+                                else
+                                {
+                                    <span>Deactivate</span>
+                                }
+                            </Button>
+                        </td>
+                        <td><Button class="btn btn-sm btn-success" @onclick="() => SelectUser(economyreportElectric.UserID)">Go To User</Button></td>
+                    </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+
+
+    <div id="modal" class="modal text-center">
+        <form class="modal-content">
+            <div class="container">
+                @switch (CurrentAction)
+                {
+                    case ModalActions.Update:
+                        <h3 class="text-center form-signin">Update Report</h3>
+                        <EditForm method="post" EditContext="@ECice" class="text-center justify-content-center form-signin">
+                            <DataAnnotationsValidator />
+                            <div class="form-group row">
+                                <label for="EconomyReportElectricFull_Range" class="col-sm-2 col-form-label">EconomyReportElectric Full Range</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EconomyReportElectricFull_Range" placeholder="Full Range" @bind-value="EconomyReportElectric.Full_Range" />
+                                </div>
+                            </div>
+                            <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                        </EditForm>
+
+                        <div class="clearfix">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    @onclick="UpdateEconomyReportElectric">
+                                Update
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                    @onclick="HideModal">
+                                Close
+                            </button>
+                        </div>
+                        <p style="color:red" id="ErrorCode">@ModalError</p>
+                        break;
+
+
+                    case ModalActions.Create:
+                        <h3 class="text-center form-signin">Create Report</h3>
+                        <EditForm method="post" EditContext="@ECice" class="text-center justify-content-center form-signin">
+                            <DataAnnotationsValidator />
+                            <div class="form-group row">
+                                <label for="EconomyReportElectricFull_Range" class="col-sm-2 col-form-label">EconomyReportElectric Full Range</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="text" id="EconomyReportElectricFull_Range" placeholder="Full Range" @bind-value="EconomyReportElectric.Full_Range" />
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="EconomyReportElectricIs_Active" class="col-sm-2 col-form-label">EconomyReportElectric Active</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="checkbox" id="EconomyReportElectricIs_Active" placeholder="Active" @bind-value="EconomyReportElectric.Is_Active" />
+                                </div>
+                            </div>
+
+                            <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                        </EditForm>
+
+                        <div class="clearfix">
+                            <button type="button" class="btn btn-sm btn-success"
+                                    @onclick="CreateEconomyReportElectric">
+                                Create
+                            </button>
+                            <button type="button" class="btn btn-sm btn-secondary"
+                                    @onclick="HideModal">
+                                Close
+                            </button>
+                        </div>
+                        <p style="color:red" id="ErrorCode">@ModalError</p>
+                        break;
+                }
+            </div>
+        </form>
+    </div>
+}
+
+@code {
+
+    // Used to decide what the modal will show
+    public ModalActions CurrentAction { get; set; }
+    public string ModalError { get; set; }
+
+    public int EngineIDFromLastPage { get; set; }
+    public bool EngineBoolIsElectricFromLastPage { get; set; }
+
+    private string ManufactuerName { get; set; }
+    private string ModelName { get; set; }
+    private string EngineType { get; set; }
+
+    public string SearchValue { get; set; }
+
+    public string APIAnswer { get; set; }
+    public string ErrorMessage { get; set; }
+
+    public AuthenticationState authState { get; set; }
+
+    //ICE Reports
+    private EditContext ECice;
+    public EconomyReportICE SelectedEconomyReportICE { get; set; }
+    public List<EconomyReportICE> EconomyReportICEs { get; set; }
+    public List<EconomyReportICE> EconomyReportICEsSearchList { get; set; }
+
+    //Electric Reports
+    private EditContext ECel;
+    private EconomyReportElectric SelectedEconomyReportElectric { get; set; }
+    public List<EconomyReportElectric> EconomyReportElectrics { get; set; }
+    public List<EconomyReportElectric> EconomyReportElectricsSearchList { get; set; }
+
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender == true)
+        {
+            await JSRuntime.InvokeVoidAsync("loadModal");
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        //Name for editform with a user obejct in it, so valdation can be done.
+        ECice = new EditContext(EconomyReportICE);
+        ECel = new EditContext(EconomyReportElectric);
+        base.OnInitialized();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("EngineID", out var EconomyReportICEID) && (QueryHelpers.ParseQuery(uri.Query).TryGetValue("IsElectric", out var IsElectric)) && (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ManufactuerName", out var ManufactuerNameFromLastPage)) && (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ModelName", out var ModelNameFromLastPage)) && (QueryHelpers.ParseQuery(uri.Query).TryGetValue("EngineType", out var EngineTypeFromLastPage)))
+        {
+            EngineIDFromLastPage = Convert.ToInt32(EconomyReportICEID);
+            EngineBoolIsElectricFromLastPage = Convert.ToBoolean(IsElectric);
+            ManufactuerName = ManufactuerNameFromLastPage;
+            ModelName = ModelNameFromLastPage;
+            EngineType = EngineTypeFromLastPage;
+            if (EngineBoolIsElectricFromLastPage == false)
+            {
+                await GetEconomyReportICEList(EngineIDFromLastPage);
+            }
+            else
+            {
+                await GetEconomyReportElectricList(EngineIDFromLastPage);
+            }
+        }
+        else
+        {
+            ErrorMessage = "No Engine ID From Last Page.";
+        }
+    }
+    /////////////////////////// EconomyReportICE SECTION //////////////////////////////////////////////
+
+
+    public async Task GetEconomyReportICEList(int EngineIDFromLastPage)
+    {
+        APIAnswer = await EcoService.GetEcoICEList(EngineIDFromLastPage);
+        try
+        {
+            EconomyReportICEs = JsonConvert.DeserializeObject<List<EconomyReportICE>>(APIAnswer);
+            EconomyReportICEsSearchList = EconomyReportICEs;
+            if (EconomyReportICEsSearchList.Count == 0)
+            {
+                ErrorMessage = "Report List Is Empty";
+            }
+        }
+        catch (Exception)
+        {
+            ErrorMessage = APIAnswer;
+        }
+    }
+
+    private void SearchChangeEventIRC(ChangeEventArgs args)
+    {
+        // Get the search value from the textbox
+        SearchValue = args.Value.ToString();
+        // Use Search to filter the displayed list down
+        EconomyReportICEsSearchList = EconomyReportICEs.Where(ices => ices.Motorway.ToString().ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+
+    private async Task CreateEconomyReportICE()
+    {
+        if (ECice.Validate())
+        {
+            try
+            {
+                EconomyReportICE.EngineId = EngineIDFromLastPage;
+                EconomyReportICE.UserID = Int32.Parse(authState.User.Claims.FirstOrDefault(x => x.Type == "Id").Value);
+                ModalError = await EcoService.CreateICEReport(EconomyReportICE);
+                await GetEconomyReportICEList(EngineIDFromLastPage);
+            }
+            catch (Exception)
+            {
+                ModalError = "Unexpected Error";
+            }
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateEconomyReportICE()
+    {
+        if (ECice.Validate())
+        {
+            try
+            {
+                ModalError = await EcoService.UpdateICEReport(EconomyReportICE);
+                await GetEconomyReportICEList(EngineIDFromLastPage);
+            }
+            catch (Exception)
+            {
+                ModalError = "Unexpected Error";
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeactivateAndActivateEconomyReportICE(EconomyReportICE ice)
+    {
+        if (ice.Is_Active == false)
+        {
+            ice.Is_Active = true;
+        }
+        else
+        {
+            ice.Is_Active = false;
+        }
+        try
+        {
+            ErrorMessage = await EcoService.UpdateICEReport(ice);
+            await GetEconomyReportICEList(EngineIDFromLastPage);
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Unexpected Error";
+        }
+        StateHasChanged();
+    }
+
+    private async Task ShowUpdateModalEconomyReportICE(EconomyReportICE economyreportICE)
+    {
+        EconomyReportICE = economyreportICE;
+        ClearErrorText();
+        CurrentAction = ModalActions.Update;
+        await JSRuntime.InvokeVoidAsync("showModal");
+    }
+
+    /////////////////////////// END OF EconomyReportICE SECTION ///////////////////////////////////////
+
+
+
+    /////////////////////////// Economy Report Electrics //////////////////////////////////////////////
+
+    public async Task GetEconomyReportElectricList(int EngineIDFromLastPage)
+    {
+        APIAnswer = await EcoService.GetEcoListElectric(EngineIDFromLastPage);
+        try
+        {
+            EconomyReportElectrics = JsonConvert.DeserializeObject<List<EconomyReportElectric>>(APIAnswer);
+            EconomyReportElectricsSearchList = EconomyReportElectrics;
+        }
+        catch (Exception)
+        {
+            ErrorMessage = APIAnswer;
+        }
+    }
+
+    private void SearchChangeEventElectric(ChangeEventArgs args)
+    {
+        // Get the search value from the textbox
+        SearchValue = args.Value.ToString();
+        // Use Search to filter the displayed list down
+        EconomyReportElectricsSearchList = EconomyReportElectrics.Where(eles => eles.Full_Range.ToString().ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+
+    private async Task CreateEconomyReportElectric()
+    {
+        if (ECice.Validate())
+        {
+            try
+            {
+                EconomyReportElectric.EngineId = EngineIDFromLastPage;
+                EconomyReportElectric.UserID = Int32.Parse(authState.User.Claims.FirstOrDefault(x => x.Type == "Id").Value);
+                ModalError = await EcoService.CreateElectricReport(EconomyReportElectric);
+                await GetEconomyReportElectricList(EngineIDFromLastPage);
+            }
+            catch (Exception)
+            {
+                ModalError = "Unexpected Error";
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateEconomyReportElectric()
+    {
+        if (ECice.Validate())
+        {
+            try
+            {
+                ModalError = await EcoService.UpdateElectricReport(EconomyReportElectric);
+                await GetEconomyReportElectricList(EngineIDFromLastPage);
+            }
+            catch (Exception)
+            {
+                ModalError = "Unexpected Error";
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeactivateAndActivateEconomyReportElectric(EconomyReportElectric economyreportElectric)
+    {
+        if (economyreportElectric.Is_Active == false)
+        {
+            economyreportElectric.Is_Active = true;
+        }
+        else
+        {
+            economyreportElectric.Is_Active = false;
+        }
+        try
+        {
+            ModalError = await EcoService.UpdateElectricReport(economyreportElectric);
+            await GetEconomyReportElectricList(EngineIDFromLastPage);
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Unexpected Error";
+        }
+        StateHasChanged();
+    }
+
+    private async Task ShowUpdateModalEconomyReportElectric(EconomyReportElectric economyreportElectric)
+    {
+        EconomyReportElectric = economyreportElectric;
+        ClearErrorText();
+        CurrentAction = ModalActions.Update;
+        await JSRuntime.InvokeVoidAsync("showModal");
+    }
+
+    /////////////////////////// END OF Economy Report Electrics ///////////////////////////////////////
+
+    public void SelectUser(int UserID)
+    {
+        // Send the selected manufacturer to the next page in a query
+        NavManager.NavigateTo("/EditUser/?UserID=" + UserID, true);
+    }
+
+    private async Task ShowCreateModalEconomyReport()
+    {
+        ClearErrorText();
+        ClearInput();
+        CurrentAction = ModalActions.Create;
+        await JSRuntime.InvokeVoidAsync("showModal");
+    }
+
+    private async Task HideModal()
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal");
+        ClearErrorText();
+    }
+
+    private void ClearErrorText()
+    {
+        ECice = new EditContext(EconomyReportICE);
+        ECel = new EditContext(EconomyReportElectric);
+        ModalError = "";
+        ErrorMessage = "";
+    }
+
+    private void ClearInput()
+    {
+        EconomyReportICE.Motorway = 0;
+        EconomyReportICE.City = 0;
+        EconomyReportICE.Average = 0;
+        EconomyReportICE.Is_Active = false;
+        EconomyReportElectric.Full_Range = 0;
+        EconomyReportElectric.Is_Active = false;
+    }
+
+}

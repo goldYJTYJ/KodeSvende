@@ -1,0 +1,200 @@
+﻿@using ModelLibrary;
+@using ModelLibrary.DTO;
+@using Services;
+@inject SearchService SearchService
+@inject Engine engine
+@inject NavigationManager NavManager
+@using Microsoft.AspNetCore.WebUtilities
+@using Newtonsoft.Json;
+@using Microsoft.AspNetCore.Components.Web
+
+<!-- Page information -->
+<section class="jumbotron text-center bg-white" style="padding: 1rem 0.5rem; margin-bottom: 0rem;">
+    <div class="container">
+        @if (CarInfo != null)
+        {
+            <h2 class="jumbotron-heading">Select The Engine For Your <br /> @CarInfo.ManufacturerName @CarInfo.ModelName</h2>
+        }
+    </div>
+</section>
+
+<!-- Search -->
+<div class="row">
+    <div class="col-xs-6">
+        <div class="input-group mb-1">
+            <div class="input-group-prepend">
+                <span class="input-group-text" id="inputGroup-sizing-sm">Search</span>
+            </div>
+            <input class="form-control" type="search" placeholder="Find Your Model Here..."
+                   value="@SearchValue" @oninput="SearchChangeEvent">
+        </div>
+    </div>
+    <div class="col-xs-6 ml-2">
+        <button class="btn btn-success" type="button" @onclick="() => { reset(); }">Reset</button>
+    </div>
+</div>
+
+<!-- Table for ICE engines -->
+<div class="row">
+    @if (Is_ICE)
+    {
+        <table id="EngineTable" class="table bg-light table-hover table-striped hoverHand" style="border-radius: 0.4em; overflow: hidden;">
+            <thead class="tablehead">
+                <tr>
+                    <th scope="col">Type</th>
+                    <th scope="col">Size</th>
+                    <th scope="col">Fuel</th>
+                    <th scope="col">WLTP (Km/l)</th>
+                    <th scope="col">NEDC (Km/l)</th>
+                </tr>
+            </thead>
+            <tbody>
+
+                @if (engineSearchList != null)
+                {
+                    @foreach (Engine engine in engineSearchList)
+                    {
+                        if (engine.Is_Electric == false)
+                        {
+                            <tr @onclick="() => SelectEngine(engine.Id, 1)">
+                                <td>@engine.Type</td>
+                                <td>@engine.Size</td>
+                                <td>@engine.Fuel</td>
+                                <td>@engine.WLTP</td>
+                                <td>@engine.NEDC</td>
+                            </tr>
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    }
+
+    <!-- Table for electric engines -->
+    @if (Is_Electric)
+    {
+        <table id="EngineTable" class="table bg-light table-hover table-striped" style="border-radius: 0.4em; overflow: hidden;">
+            <thead class="tablehead">
+                <tr>
+                    <th scope="col">Type</th>
+                    <th scope="col">Battery</th>
+                    <th scope="col">Battery Size</th>
+                    <th scope="col">WLTP Range</th>
+                    <th scope="col">kWh/100 km</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (engineSearchList != null)
+                {
+                    @foreach (Engine engine in engineSearchList)
+                    {
+                        if (engine.Is_Electric == true)
+                        {
+                            <tr @onclick="() => SelectEngine(engine.Id, 2)">
+                                <td>@engine.Fuel</td>
+                                <td>@engine.Type</td>
+                                <td>@engine.Size kWh</td>
+                                <td>@engine.WLTP km</td>
+                                <td>@engine.Watt_Hours_Per_KM</td>
+                            </tr>
+                        }
+                    }
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+<!-- Error message -->
+@if (ErrorMessage != null)
+{
+    <p class="text-danger">@ErrorMessage</p>
+}
+
+@code {
+    private string APIAnswer { get; set; }
+    private List<Engine> engines { get; set; }
+    private List<Engine> engineSearchList { get; set; }
+    private string SearchValue { get; set; }
+    private string APIAnswerCarInfo { get; set; }
+    private CarInfoObject CarInfo { get; set; }
+    private bool Is_ICE { get; set; }
+    private bool Is_Electric { get; set; }
+    private string ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // fill engine list
+        try
+        {
+            // Query from URL
+            var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+            if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ModelID", out var ModelID))
+            {
+                // Tjek if url input is valid
+                if (Int32.TryParse(ModelID, out var parsed))
+                {
+                    APIAnswer = await SearchService.GetEngineList(Convert.ToInt32(ModelID));
+                    engines = JsonConvert.DeserializeObject<List<Engine>>(APIAnswer);
+                    engineSearchList = engines;
+                    TypeChecker();
+                    if (engines.Count != 0)
+                    {
+                        APIAnswerCarInfo = await SearchService.GetCarInformation(engines[0].Id);
+                        CarInfo = JsonConvert.DeserializeObject<CarInfoObject>(APIAnswerCarInfo);
+                    }
+                }
+            }
+
+            // If nothing found provide error message
+            if (engines == null || engines.Count == 0)
+            {
+                ErrorMessage = "No engines found for this model.";
+            }
+        }
+        catch (Exception)
+        {
+
+            // If that fails provide given error message
+            ErrorMessage = APIAnswer;
+        }
+    }
+
+    // Check the type of engines, so the tables only show up if needed
+    private void TypeChecker()
+    {
+        var IsICE = engineSearchList.Find(x => x.Is_Electric == false);
+        var IsElectric = engineSearchList.Find(x => x.Is_Electric == true);
+        if (IsICE != null)
+        {
+            Is_ICE = true;
+        }
+
+        if (IsElectric != null)
+        {
+            Is_Electric = true;
+        }
+    }
+
+    // Onclick take engine ID and send to next page in query
+    private void SelectEngine(int EngineID, int type)
+    {
+        NavManager.NavigateTo("/Economypage/?EngineID=" + EngineID + "&Type=" + type + "", true);
+    }
+
+    // Search in table
+    private void SearchChangeEvent(ChangeEventArgs args)
+    {
+        // Get the search value from the textbox
+        SearchValue = args.Value.ToString();
+        // Use Search to filter the displayed list down
+        engineSearchList = engines.Where(engine => engine.Size.ToLower().Contains(SearchValue.ToLower()) || engine.Type.ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+
+    // reset btn
+    private void reset()
+    {
+        SearchValue = "";
+        engineSearchList = engines.Where(engine => engine.Size.ToLower().Contains(SearchValue.ToLower()) || engine.Type.ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+}

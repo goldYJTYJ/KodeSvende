@@ -1,0 +1,16 @@
+﻿@page
+@using Website.Pages.Shared.Componets
+@model Website.Pages.AdminSearchCarManufacturerModel
+@{
+    ViewData["Title"] = "Admin Search Car Manufactuer";
+}
+@{
+}
+@section Styles {
+    <link rel="stylesheet" href="~/css/modal.css" />
+}
+@(await Html.RenderComponentAsync<AdminSearchCarManufacturerRC>(RenderMode.ServerPrerendered))
+
+@section Scripts {
+    <script src="~/js/modal.js" asp-append-version="true"></script>
+}

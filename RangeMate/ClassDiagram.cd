@@ -1,0 +1,60 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="FullSignature">
+  <Class Name="API.Controllers.CommentController">
+    <Position X="7.25" Y="7.25" Width="4" />
+    <TypeIdentifier>
+      <HashCode>ABAAABAAAAAAAAAAAAAAAAAAAAAAAAAgAAgAAAAAQAA=</HashCode>
+      <FileName>Controllers\CommentController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="API.Controllers.EcoController">
+    <Position X="6.75" Y="0.75" Width="4.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAoBAAAgAACAAAABAAgABAAAAAAAAAAAAACEAAAAA=</HashCode>
+      <FileName>Controllers\EcoController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="API.Controllers.EngineController">
+    <Position X="7.25" Y="10" Width="3.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAAABAAAAAAAAAAAAAAAAAAAABAAAAAAAAAQ=</HashCode>
+      <FileName>Controllers\EngineController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="API.Controllers.LoginController">
+    <Position X="0.75" Y="4.75" Width="6" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAIAAAAA=</HashCode>
+      <FileName>Controllers\LoginController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="API.Controllers.ManufacturerController">
+    <Position X="2.5" Y="7.25" Width="4.25" />
+    <TypeIdentifier>
+      <HashCode>AAACABAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAgA=</HashCode>
+      <FileName>Controllers\ManufacturerController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="API.Controllers.ModelController">
+    <Position X="3" Y="9.75" Width="4" />
+    <TypeIdentifier>
+      <HashCode>AAAAABAAAAAAAAAAAAAAAAAACgAAAAAACAAAAAAAAAA=</HashCode>
+      <FileName>Controllers\ModelController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="API.Controllers.SearchController">
+    <Position X="7" Y="4.5" Width="4.5" />
+    <TypeIdentifier>
+      <HashCode>ACAAABAAAAAAAAAAAAAAAAAABAIAAAAAAAAAAAAAACA=</HashCode>
+      <FileName>Controllers\SearchController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="API.Controllers.UserController">
+    <Position X="0.75" Y="0.75" Width="5.75" />
+    <TypeIdentifier>
+      <HashCode>IIAAABAAAQAAAgAAAAAAAAAAAAAAAAAAEAgAAIIABgA=</HashCode>
+      <FileName>Controllers\UserController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>

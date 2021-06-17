@@ -1,0 +1,29 @@
+﻿@page
+@model Website.Pages.LoginModel
+@using Website.Pages.Shared.Componets
+@{
+    ViewData["Title"] = "Login";
+}
+@{
+}
+
+<!-- Login Form -->
+<form method="post" class="form-signin">
+    <h1 class="display-3 mb-3">Range Mate</h1>
+    <h1 class="h3 mb-3 font-weight-normal">Please sign in</h1>
+    <div class="form-group">
+        <label for="inputEmail" class="">E-Mail</label>
+        <input asp-for="Input.Email" class="form-control" type="text" id="inputInitials" placeholder="E-mail" required autofocus>
+    </div>
+    <div class="form-group">
+        <label for="inputPassword" class="">Password</label>
+        <input asp-for="Input.Password" class="form-control" type="password" id="inputPassword" placeholder="Password" required>
+    </div>
+    <button type="submit" class="btn btn-lg btn-success btn-block">
+        Log In
+    </button>
+    <p style="color:red" id="ErrorCode" value="@Model.ShowError">@Model.ShowError</p>
+    <p class="mt-5 mb-3 text-muted">&copy; Range Mate 2021</p>
+</form>
+<!-- Create user -->
+<a class="btn btn-success" asp-page="/CreateUser" >Create User</a>

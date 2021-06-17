@@ -1,0 +1,432 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.WebUtilities
+@using Website.Services
+@using ModelLibrary
+@using ModelLibrary.Enums
+@using System.Security.Claims;
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inject NavigationManager NavManger
+@inject UserServices UserServices
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+
+<h3 class="text-center form-signin">Edit User</h3>
+
+<EditForm method="post" EditContext="@EC" class="text-center mx-auto w-75">
+    <DataAnnotationsValidator />
+
+    <div class="form-group row">
+        <label for="InputFirstname" class="col-sm-2 col-form-label">Firstname</label>
+        <div class="col-sm-10">
+            <input class="form-control" type="text" id="InputFirstname" placeholder="Firstname" @bind-value="user.FirstName" required autofocus />
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <label for="InputLastname" class="col-sm-2 col-form-label">Lastname</label>
+        <div class="col-sm-10">
+            <input class="form-control" type="text" id="InputLastname" placeholder="Lastname" @bind-value="user.LastName" required />
+        </div>
+    </div>
+
+    <div class="form-group row">
+        <label for="InputEmail" class="col-sm-2 col-form-label">Email</label>
+        <div class="col-sm-10">
+            <input class="form-control" type="text" id="InputEmail" placeholder="Email" @bind-value="user.Email">
+        </div>
+    </div>
+
+    @if (ID == 0)
+    {
+        <div class="form-group row">
+            <label for="InputPassword" class="col-sm-2 col-form-label">Confirm Password</label>
+            <div class="col-sm-10">
+                <input class="form-control" type="password" id="InputPassword" placeholder="Password" @bind-value="user.Password" />
+            </div>
+        </div>
+    }
+
+    <button type="button"  @onclick="@EditUser" class="btn btn-lg btn-success">
+        Update User
+    </button>
+
+    <button type="button" @onclick="SubmitHandler" class="btn btn-lg btn-danger">
+        @DeactivateOrActivate User
+    </button>
+
+    <button type="button" @onclick="OpenChangePasswordModal" class="btn btn-lg btn-danger">
+        Change Password
+    </button>
+
+    <p style="color:red" id="ErrorCode">@ErrorMessageAndMessageFromAPI</p>
+    <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+</EditForm>
+
+
+<div id="modal" class="modal text-center">
+    <form class="modal-content">
+        <div class="container">
+            @switch (CurrentAction)
+            {
+                case ModalActions.Deactivate:
+
+                    <h1 class="text-danger">@DeactivateOrActivate account ?</h1>
+                    <p>
+                        Are you sure, you want to @DeactivateOrActivate <strong>@user.FirstName</strong> <br />
+                    </p>
+
+                    <div class="clearfix">
+                        <button type="button" class="btn btn-sm btn-danger"
+                                @onclick="DeactivateAndActivateUser">
+                            @DeactivateOrActivate
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                @onclick="HideModal">
+                            Cancel
+                        </button>
+                    </div>
+                    <p style="color:red" id="ErrorCode">@ModalError</p>
+                    break;
+
+                case ModalActions.Update:
+
+                    <h3 class="text-center form-signin">Update Password</h3>
+                    <EditForm method="post" EditContext="@ECP" class="text-center justify-content-center form-signin">
+                        <DataAnnotationsValidator />
+
+                        @if (ID == 0)
+                        {
+                            <div class="form-group row">
+                                <label for="OldPassword" class="col-sm-2 col-form-label">Old Password</label>
+                                <div class="col-sm-10">
+                                    <input class="form-control" type="password" id="OldPassword" placeholder="Old Password" @bind-value="EditUserOldPassword" />
+                                </div>
+                            </div>
+                        }
+                        <div class="form-group row">
+                            <label for="NewPassword" class="col-sm-2 col-form-label">New Password</label>
+                            <div class="col-sm-10">
+                                <input class="form-control" type="password" id="NewPassword" placeholder="New Password" @bind-value="userP.Password" />
+                            </div>
+                        </div>
+                        
+                        <div class="form-group row">
+                            <label for="ConfirmeNewPassword" class="col-sm-2 col-form-label">Confirme new Password</label>
+                            <div class="col-sm-10">
+                                <input class="form-control" type="password" id="ConfirmeNewPassword" placeholder="Confirme New Password" @bind-value="EditUserConfirmPassword" />
+                            </div>
+                        </div>
+                        
+                        <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                    </EditForm>
+
+                    <div class="clearfix">
+                        <button type="button" class="btn btn-sm btn-success"
+                                @onclick="ChangePassword">
+                            Update
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                @onclick="HideModal">
+                            Close
+                        </button>
+                    </div>
+                    <p style="color:red" id="ErrorCode">@ModalError</p>
+                    break;
+            }
+        </div>
+    </form>
+</div>
+
+@code {
+    // Used to decide what the modal will show
+    public ModalActions CurrentAction { get; set; }
+
+    [Parameter]
+    public int ID { get; set; }
+    public AuthenticationState authState { get; set; }
+    //Used for swapping between activate and deactivate. 
+    public string DeactivateOrActivate { get; set; } = "Deactivate";
+
+    //Strings to be written out on the page
+    public string ErrorMessageAndMessageFromAPI { get; set; }
+    public string ModalError { get; set; }
+
+
+    //Used for edit user and deactivate/activate users.
+    public User UserfromDB { get; set; }
+    User user = new User();
+    private EditContext EC;
+
+
+    //Password stuff
+    User userP = new User();
+    private EditContext ECP;
+    public string EditUserOldPassword { get; set; }
+    public string EditUserConfirmPassword { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender == true)
+        {
+            await JSRuntime.InvokeVoidAsync("loadModal");
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        //Name for editform with a user obejct in it, so valdation can be done.
+        EC = new EditContext(user);
+        ECP = new EditContext(userP);
+        userP.Email = "Temp@gmail.com";
+        base.OnInitialized();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = NavManger.ToAbsoluteUri(NavManger.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("UserID", out var id))
+        {
+            ID = (Convert.ToInt32(id));
+            if(ID == 0)
+            {
+                ErrorMessageAndMessageFromAPI = "Did not get the ID from last page.";
+            }
+        }
+
+        authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        try
+        {
+            if (ID != 0 && authState.User.IsInRole("Administrator"))
+            {
+                UserfromDB = await UserServices.GetUser(ID);
+                //fuck det her er dumt, hvorfor virker det, men ikke det andet. 
+                user.FirstName = UserfromDB.FirstName;
+                user.LastName = UserfromDB.LastName;
+                user.Email = UserfromDB.Email;
+                user.Is_Active = UserfromDB.Is_Active;
+                user.Password = UserfromDB.Password;
+                if (user.Is_Active == true)
+                {
+                    DeactivateOrActivate = "Deactivate";
+                }
+                else if (user.Is_Active == false)
+                {
+                    DeactivateOrActivate = "Activate";
+                }
+                else
+                {
+                    if (user.FirstName != "")
+                    {
+                        ErrorMessageAndMessageFromAPI = user.FirstName;
+                    }
+                    else
+                    {
+                        ErrorMessageAndMessageFromAPI = "Get User Failed";
+                    }
+                }
+            }
+            else if (authState.User.IsInRole("User") || authState.User.IsInRole("Administrator"))
+            {
+                user.Id = Int32.Parse(authState.User.Claims.FirstOrDefault(x => x.Type == "Id").Value);
+                user.FirstName = authState.User.Identity.Name;
+                user.LastName = authState.User.Claims.FirstOrDefault(x => x.Type == "LastName").Value;
+                user.Email = authState.User.Claims.FirstOrDefault(x => x.Type == "Email").Value;
+            }
+        }
+        catch (Exception)
+        {
+            ErrorMessageAndMessageFromAPI = "Could not set user";
+        }
+    }
+
+    private async Task EditUser()
+    {
+        ClearErrorTexts();
+        if (ID != 0 && authState.User.IsInRole("Administrator") && EC.Validate() == true)
+        {
+            ErrorMessageAndMessageFromAPI = await UserServices.AdminEditUser(ID, user.FirstName, user.LastName, user.Email) ;
+        }
+        else if (authState.User.IsInRole("User") || authState.User.IsInRole("Administrator"))
+        {
+            if (EC.Validate())  // manually trigger the validation here
+            {
+                try
+                {                  
+                    ErrorMessageAndMessageFromAPI = await UserServices.EditUser(user);
+                    user.Password = "";
+                }
+                catch (Exception)
+                {
+                    ErrorMessageAndMessageFromAPI = "Unexpected Error";
+                }
+            }
+        }
+        else
+        {
+            ErrorMessageAndMessageFromAPI = "Plz Log In";
+        }
+    }
+
+    private async Task DeactivateAndActivateUser()
+    {
+        ClearErrorTexts();
+        if (ID != 0 && authState.User.IsInRole("Administrator"))
+        {
+            try
+            {
+                var MessageFromAPI = await UserServices.AdminDeactivateAndActivateUser(ID);
+                if (MessageFromAPI == "User has been changed to InActive.")
+                {
+                    await HideModal();
+                    DeactivateOrActivate = "Activate";
+                }
+                else if (MessageFromAPI == "User has been changed to Active.")
+                {
+                    await HideModal();
+                    DeactivateOrActivate = "Deactivate";
+                }
+                else
+                {
+                    ModalError = MessageFromAPI;
+                }
+            }
+            catch (Exception)
+            {
+                ModalError = "Unexpected Error";
+            }
+        }
+        else if (authState.User.IsInRole("User") || authState.User.IsInRole("Administrator"))
+        {
+            try
+            {
+                var ResponsMessage = await UserServices.DeactivateUser(user);
+                if (ResponsMessage == "User has been changed to InActive.")
+                {
+                    StateHasChanged();
+                    //When the user is set to inactive, he will be logout of his account. 
+                    NavManger.NavigateTo("/LogOut", forceLoad: true);
+                }
+                else
+                {
+                    ModalError = ResponsMessage;
+                }
+            }
+            catch (Exception)
+            {
+
+                throw;
+            }
+        }
+        else
+        {
+            ModalError = "Unknow Error";
+        }
+    }
+
+    private async void SubmitHandler()
+    {
+        ClearErrorTexts();
+        if (ID != 0 && authState.User.IsInRole("Administrator"))
+        {
+            CurrentAction = ModalActions.Deactivate;
+            await JSRuntime.InvokeVoidAsync("showModal");
+        }
+        else
+        {
+            if (EC.Validate())// manually trigger the validation here
+            {
+                CurrentAction = ModalActions.Deactivate;
+                await JSRuntime.InvokeVoidAsync("showModal");
+            }
+        }
+    }
+    ///////////////////////////////////// Password Section //////////////////////////////////////////
+    private async void OpenChangePasswordModal()
+    {
+        clearInputAndText();
+        CurrentAction = ModalActions.Update;
+        await JSRuntime.InvokeVoidAsync("showModal");
+    }
+
+    private async void ChangePassword()
+    {
+        // Check if the editform is corret completed and if the new password is written corretly 2 times.
+        if (EditUserConfirmPassword != userP.Password)
+        {
+            clearInputAndText();
+            ModalError = "New Passwords did not match";
+        }
+        else if (userP.Password == "" && EditUserConfirmPassword == "")
+        {
+            clearInputAndText();
+            ModalError = "Fill out all the fields.";
+        }
+        else
+        {
+            if (ECP.Validate())
+            {
+                try
+                {
+                    if (ID != 0 && authState.User.IsInRole("Administrator"))
+                    {
+                        ModalError = await UserServices.AdminUpdatePassword(ID, userP.Password);
+                    }
+                    else if (authState.User.IsInRole("User") || authState.User.IsInRole("Administrator"))
+                    {
+                        ModalError = await UserServices.UpdatePassword(user.Id, userP.Password, EditUserOldPassword);
+                    }
+                    clearInputAndText();
+                    StateHasChanged();
+                }
+
+                catch (Exception)
+                {
+                    ModalError = "Unknow Error";
+                }
+            }
+        }
+    }
+
+    ///////////////////////////////////// END Of Password Section //////////////////////////////////////////
+
+    private async Task HideModal()
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal");
+        clearInputAndText();
+        ClearErrorTexts();
+    }
+
+    private void clearInputAndText()
+    {
+        if (ID != 0 && authState.User.IsInRole("Administrator"))
+        {
+            EditUserConfirmPassword = "";
+            userP.Password = "";
+            EditUserOldPassword = "";
+            ErrorMessageAndMessageFromAPI = "";
+            EC = new EditContext(user);
+            ECP = new EditContext(userP);
+            userP.Email = "Temp@gmail.com";
+        }
+        else
+        {
+            user.Password = "";
+            EditUserConfirmPassword = "";
+            userP.Password = "";
+            EditUserOldPassword = "";
+            ErrorMessageAndMessageFromAPI = "";
+            EC = new EditContext(user);
+            ECP = new EditContext(userP);
+            userP.Email = "Temp@gmail.com";
+        }
+    }
+
+    private void ClearErrorTexts()
+    {
+        ErrorMessageAndMessageFromAPI = "";
+        ModalError = "";
+    }
+}

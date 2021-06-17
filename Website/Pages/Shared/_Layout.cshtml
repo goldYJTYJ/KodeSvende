@@ -1,0 +1,91 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IAuthorizationService AuthorizationService
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Website</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" />
+    @RenderSection("Styles", required: false)
+    <base href="~/" />
+</head>
+<body>
+    <header>
+        <!-- Navigation Menu -->
+        <nav class="navbar navbar-expand-sm navbar-toggleable-sm border-bottom box-shadow mb-3 navbar-dark text-white bgColor">
+            <div class="container">
+                <a class="navbar-brand" asp-area="" asp-page="/Index">Range Mate</a>
+                <button class="navbar-toggler" type="button" data-toggle="collapse" data-target=".navbar-collapse" aria-controls="navbarSupportedContent"
+                        aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div id="navLinks" class="collapse navbar-collapse">
+                    <ul class="navbar-nav flex-grow-1">
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-page="/Index">Search Car</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-page="/Information">How to Use</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-page="/AboutRangeMate">About Us</a>
+                        </li>
+                        @if (User.IsInRole("Administrator"))
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link text-light" asp-area="" asp-page="/AdminSearchCarManufacturer">Admin Tools</a>
+                            </li>
+                        }
+                    </ul>
+                    <!-- Only show login if user is not logged in. This uses "is authenticated". -->
+                    @if (!User.Identity.IsAuthenticated)
+                    {
+                        <div class="nav-item">
+                            <a class="nav-link text-light" asp-area="" asp-page="/Login"><i class="fa fa-users" aria-hidden="true"></i>Login</a>
+                        </div>
+                    }
+
+                    <!-- Only show log out and users name if user is logged in. This uses "roles". -->
+                    @if (User.IsInRole("Administrator") || User.IsInRole("User"))
+                    {
+                        <div>
+                            <a class="nav-link text-light" asp-area="" asp-page="/EditUser"><i class="fa fa-users" aria-hidden="true"></i>@User.Identity.Name</a>
+                        </div>
+                        <div class="nav-item">
+
+                            <a class="nav-link text-light" asp-area="" asp-page="/LogOut"><i class="fa fa-sign-out" aria-hidden="true"></i>Log Out</a>
+                        </div>
+                    }
+                </div>
+            </div>
+        </nav>
+    </header>
+    <div class="container">
+        <main role="main" class="pb-3">
+            @RenderBody()
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="border-top footer text-muted">
+        <div class="container">
+            &copy; 2021 - Range Mate - All Rights Reserved - <a asp-area="" asp-page="/AboutRangeMate">About Us</a>
+        </div>
+    </footer>
+    
+    <!-- import scripts -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+            integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+            crossorigin="anonymous"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="_framework/blazor.server.js"></script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

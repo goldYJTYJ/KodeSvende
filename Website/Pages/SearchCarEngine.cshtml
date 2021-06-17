@@ -1,0 +1,10 @@
+﻿@page
+@model Website.Pages.SearchCarEngineModel
+@using Website.Pages.Shared.Componets
+@{
+    ViewData["Title"] = "Search Car Engine";
+}
+@{
+}
+
+@(await Html.RenderComponentAsync<SearchCarEngineRC>(RenderMode.ServerPrerendered))

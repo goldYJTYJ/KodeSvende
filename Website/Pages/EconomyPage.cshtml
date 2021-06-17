@@ -1,0 +1,21 @@
+﻿@page
+@using Website.Pages.Shared.Componets
+@model Website.Pages.EconomyPageModel
+@{
+    ViewData["Title"] = "Economy";
+}
+@{
+}
+
+@section Styles {
+    <link rel="stylesheet" href="~/css/site.css" />
+    <link rel="stylesheet" href="~/css/modal.css" />
+}
+@(await Html.RenderComponentAsync<EconomyPageRC>(RenderMode.ServerPrerendered))
+@(await Html.RenderComponentAsync<CommentRC>(RenderMode.ServerPrerendered))
+
+@section Scripts {
+    <script src="~/js/modal.js" asp-append-version="true"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" asp-append-version="true"></script>
+}

@@ -1,0 +1,116 @@
+﻿@using ModelLibrary;
+@using Services;
+@using Microsoft.AspNetCore.Components.Web
+@using System.Net.Http;
+@using Newtonsoft.Json;
+@inject UserServices UserServices
+@inject Manufacturer manufacturer
+@inject SearchService SearchService
+@inject NavigationManager NavManager
+
+<h3 class="text-center">Admin Tools - Search User</h3>
+<div class="col-xs-3 text-center" style="height: 40px; margin-right: -15px; margin-left: -15px;">
+    <section class="btn-group float-left">
+        <div>
+            <input class="p-0 my-lg-0 align-self-center form-control" type="search" placeholder="Search User"
+                   value="@SearchValue" @oninput="SearchChangeEvent">
+        </div>
+    </section>
+
+    <p class="text-danger btn-group">@ErrorMessage</p>
+</div>
+
+<div class="row">
+    <table id="UserTable" class="table table-hover hoverHand bg-light">
+        <thead>
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Select</th>
+                <th scope="col">Active</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (ListOfUsersFromDatabase != null)
+            {
+                @foreach (User users in ListOfUsersFromDatabase)
+                {
+                    <tr class="@(users.Is_Active == false ? " btn-danger" : "")">
+                        <td @onclick="() => SelectUser(users.Id)" >@users.FirstName</td>
+                        <td @onclick="() => SelectUser(users.Id)" >@users.Email</td>
+                        <td><Button class="btn btn-sm btn-success" @onclick="() => DeactivateAndActivateUser(users.Id)">
+                                @if (users.Is_Active == false)
+                                {
+                                    <div class="text-in-button">&nbsp; Activate &nbsp;</div>
+                                }
+                                else
+                                {
+                                    <div>Deactivate</div>
+                                }
+                            </Button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    private string ErrorMessage { get; set; }
+    private string APIAnswer { get; set; }
+
+    public string SearchValue { get; set; }
+    public List<User> ListOfUsersFromDatabase { get; set; }
+    public List<User> Users { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetUserList();
+    }
+
+    public async Task GetUserList()
+    {
+        try
+        {
+            APIAnswer = await UserServices.AdminGetAllUser();
+            Users = JsonConvert.DeserializeObject<List<User>>(APIAnswer);
+            ListOfUsersFromDatabase = Users;
+            if (ListOfUsersFromDatabase.Count == 0)
+            {
+                ErrorMessage = "User List Is Empty";
+            }
+        }
+        catch (Exception)
+        {
+            ErrorMessage = APIAnswer;
+        }
+    }
+
+    public void SelectUser(int UserID)
+    {
+        // Send the selected manufacturer to the next page in a query
+        NavManager.NavigateTo("/EditUser/?UserID=" + UserID, true);
+    }
+
+    private void SearchChangeEvent(ChangeEventArgs args)
+    {
+
+        // Get the search value from the textbox
+        SearchValue = args.Value.ToString();
+        // Use Search to filter the displayed list down
+        ListOfUsersFromDatabase = Users.Where(user => user.Email.ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+
+    private async Task DeactivateAndActivateUser(int UserID)
+    {
+        try
+        {
+            var ErrorMessage = await UserServices.AdminDeactivateAndActivateUser(UserID);
+            await GetUserList();
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Unexpected Error";
+        }
+    }
+}

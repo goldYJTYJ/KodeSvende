@@ -1,0 +1,9 @@
+﻿@page
+@model Website.Pages.SearchCarModelModel
+@using Website.Pages.Shared.Componets
+@{
+    ViewData["Title"] = "Search Car Model";
+}
+@{
+}
+@(await Html.RenderComponentAsync<SearchCarModelRC>(RenderMode.ServerPrerendered))

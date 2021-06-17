@@ -1,0 +1,311 @@
+﻿@using ModelLibrary;
+@using Website.Services;
+@using Microsoft.AspNetCore.Components.Web
+@using ModelLibrary.Enums
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Net.Http;
+@using Newtonsoft.Json;
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inject Manufacturer Manufacturer
+@inject ManufacturerServices ManufacturerServices
+@inject NavigationManager NavManager
+
+
+<div class="row ">
+    <button class="btn btn-group btn-success float-left" type="button" @onclick="ChangePageToSearchUser">
+        Search User
+    </button>
+    <h3 class="text-center w-100 ">Admin Tools - Search Manufacturer</h3>
+</div>
+
+<div class="col-xs-3 text-center" style="height: 40px; margin-right: -15px; margin-left: -15px;">
+    <section class="btn-group float-left">
+        <input class="p-0 my-lg-0 align-self-center form-control" type="search" placeholder="Search Manufacturers"
+               value="@SearchValue" @oninput="SearchChangeEvent">
+    </section>
+
+    <p class="text-danger btn-group">@ErrorMessage</p>
+
+    <button class="btn btn-group btn-success float-right" type="button" @onclick="ShowCreateModal">
+        Create Manufacturer
+    </button>
+</div>
+
+<div class="row">
+    <table id="manufacturerTable" class="table table-hover hoverHand bg-light">
+        <thead>
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Edit</th>
+                <th scope="col">Active</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (manufacturersSearchList != null)
+            {
+                @foreach (Manufacturer manu in manufacturersSearchList)
+                {
+                    <tr class="@(manu.Is_Active == false ? " btn-danger" : "")">
+                        <td @onclick="() => SelectManufacturer(manu.Id, manu.Name)">@manu.Name</td>
+                        <td><Button  class="btn btn-sm btn-success" @onclick="() => ShowUpdateModal(manu)">Edit</Button></td>
+                        <td><Button class="btn btn-sm btn-success" @onclick="() =>  DeactivateAndActivate(manu)">
+                                @if (manu.Is_Active == false)
+                                {
+                                    <span class="text-in-button">&nbsp; Activate &nbsp;</span>
+                                }
+                                else
+                                {
+                                    <span>Deactivate</span>
+                                }
+                            </Button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div id="modal" class="modal text-center">
+    <form class="modal-content">
+        <div class="container">
+            @switch (CurrentAction)
+            {
+                case ModalActions.Update:
+                    <h3 class="text-center form-signin">Update Car Manufactuer</h3>
+                    <EditForm method="post" EditContext="@EC" class="text-center justify-content-center form-signin">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-group row">
+                            <label for="ManufactuerName" class="col-sm-2 col-form-label">Manufacturer Name</label>
+                            <div class="col-sm-10">
+                                <input class="form-control" type="text" id="ManufactuerName" placeholder="Name" @bind-value="Manufacturer.Name" />
+                            </div>
+                        </div>
+
+                        <p style="color:red" id="ValdationSummary"><ValidationSummary /> </p>
+                    </EditForm>
+
+                    <div class="clearfix">
+                        <button type="button" class="btn btn-sm btn-success"
+                                @onclick="UpdateManufacturer">
+                            Update
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                @onclick="HideModal">
+                            Close
+                        </button>
+                    </div>
+                    <p style="color:red" id="ErrorCode">@ModalError</p>
+                    break;
+
+
+                case ModalActions.Create:
+                    <h3 class="text-center form-signin">Create Car Manufactuer</h3>
+                    <EditForm method="post" EditContext="@EC" class="text-center justify-content-center form-signin">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-group row">
+                            <label for="ManufactuerName" class="col-sm-2 col-form-label">Manufacturer Name</label>
+                            <div class="col-sm-10">
+                                <input class="form-control" type="text" id="ManufactuerName" placeholder="Name" @bind-value="Manufacturer.Name" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="Is_Active" class="col-sm-2 col-form-label">Is Active</label>
+                            <div class="col-sm-10">
+                                <input class="form-control" type="checkbox" id="Is_Active" @bind-value="Manufacturer.Is_Active" />
+                            </div>
+                        </div>
+
+                        <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                    </EditForm>
+
+                    <div class="clearfix">
+                        <button type="button" class="btn btn-sm btn-success"
+                                @onclick="CreateManufacturer">
+                            Create
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                @onclick="HideModal">
+                            Close
+                        </button>
+                    </div>
+                    <p style="color:red" id="ErrorCode">@ModalError</p>
+                    break;
+            }
+        </div>
+    </form>
+</div>
+
+
+@code {
+
+    // Used to decide what the modal will show
+    public ModalActions CurrentAction { get; set; }
+    public string ModalError { get; set; }
+
+    public Manufacturer SelectedManufacturer { get; set; }
+
+    public string APIAnswer { get; set; }
+    public string ErrorMessage { get; set; }
+
+    //Used for edit.
+    private EditContext EC;
+
+    public List<Manufacturer> manufacturers { get; set; }
+    public List<Manufacturer> manufacturersSearchList { get; set; }
+    public string SearchValue { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender == true)
+        {
+            await JSRuntime.InvokeVoidAsync("loadModal");
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        //Name for editform with a user obejct in it, so valdation can be done.
+        EC = new EditContext(Manufacturer);
+        base.OnInitialized();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetManufacturerList();
+    }
+
+    public async Task GetManufacturerList()
+    {
+        APIAnswer = await ManufacturerServices.GetManufacturerListAdmin();
+        try
+        {
+            manufacturers = JsonConvert.DeserializeObject<List<Manufacturer>>(APIAnswer);
+            manufacturersSearchList = manufacturers;
+            if (manufacturersSearchList.Count == 0)
+            {
+                ErrorMessage = "Manufacturer List Is Empty";
+            }
+        }
+        catch (Exception)
+        {
+            ErrorMessage = APIAnswer;
+        }
+    }
+
+    public void SelectManufacturer(int ManufacturerID, string ManufactuerName)
+    {
+        // Send the selected manufacturer to the next page in a query
+        NavManager.NavigateTo("/AdminSearchCarModel/?ManufacturerID=" + ManufacturerID + "&ManufactuerName=" + ManufactuerName, true);
+    }
+
+    private void SearchChangeEvent(ChangeEventArgs args)
+    {
+        // Get the search value from the textbox
+        SearchValue = args.Value.ToString();
+        // Use Search to filter the displayed list down
+        manufacturersSearchList = manufacturers.Where(manf => manf.Name.ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+
+    private async Task CreateManufacturer()
+    {
+        if (EC.Validate())
+        {
+            try
+            {
+                ModalError = await ManufacturerServices.CreateManfacturer(Manufacturer);
+                await GetManufacturerList();
+            }
+            catch (Exception)
+            {
+                ModalError = "Unexpected Error";
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateManufacturer()
+    {
+        if (EC.Validate())
+        {
+            try
+            {
+                ModalError = await ManufacturerServices.UpdateManfacturer(Manufacturer);
+                await GetManufacturerList();
+            }
+            catch (Exception)
+            {
+                ModalError = "Unexpected Error";
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeactivateAndActivate(Manufacturer manu)
+    {
+        if (manu.Is_Active == false)
+        {
+            manu.Is_Active = true;
+        }
+        else
+        {
+            manu.Is_Active = false;
+        }
+        try
+        {
+            ErrorMessage = await ManufacturerServices.UpdateManfacturer(manu);
+            await GetManufacturerList();
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Unexpected Error";
+        }
+        StateHasChanged();
+    }
+
+    private async Task ShowUpdateModal(Manufacturer manu)
+    {
+        Manufacturer.Name = manu.Name;
+        Manufacturer.Is_Active = manu.Is_Active;
+        Manufacturer.Id = manu.Id;
+        ClearErrorText();
+        CurrentAction = ModalActions.Update;
+        await JSRuntime.InvokeVoidAsync("showModal");
+    }
+
+    private async Task ShowCreateModal()
+    {
+        ClearErrorText();
+        ClearInput();
+        CurrentAction = ModalActions.Create;
+        await JSRuntime.InvokeVoidAsync("showModal");
+    }
+
+    protected void ChangePageToSearchUser()
+    {
+        NavManager.NavigateTo("/AdminSearchUser", true);
+    }
+
+    private async Task HideModal()
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal");
+        ClearErrorText();
+    }
+
+    private void ClearErrorText()
+    {
+        ModalError = "";
+        ErrorMessage = "";
+        EC = new EditContext(Manufacturer);
+    }
+
+    private void ClearInput()
+    {
+        Manufacturer.Name = "";
+        Manufacturer.Is_Active = false;
+        Manufacturer.Id = 0;
+    }
+}

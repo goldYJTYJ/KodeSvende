@@ -1,0 +1,328 @@
+﻿@using ModelLibrary;
+@using Website.Services;
+@using ModelLibrary.Enums
+@using Microsoft.AspNetCore.WebUtilities
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Components.Forms
+@using System.Net.Http;
+@using Newtonsoft.Json;
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
+@inject ModelServices ModelServices
+@inject Model Model
+@inject NavigationManager NavManager
+
+<h3 class="text-center">Admin Tools - Manufacturer: @ManufactuerName - Search Car Model</h3>
+
+<div class="col-xs-3 text-center" style="height: 40px; margin-right: -15px; margin-left: -15px;">
+    <section class="btn-group float-left">
+        <div>
+            <input class="p-0 my-lg-0 align-self-center form-control" type="search" placeholder="Search Models"
+                   value="@SearchValue" @oninput="SearchChangeEvent">
+        </div>
+    </section>
+    <p class="text-danger btn-group">@ErrorMessage</p>
+
+    <button class="btn btn-group btn-success float-right" type="button" @onclick="ShowCreateModal">
+        Create Model
+    </button>
+</div>
+
+<div class="row">
+    <table id="modelTable" class="table table-hover hoverHand bg-light">
+        <thead>
+            <tr>
+                <th scope="col">Name</th>
+                <th scope="col">Year</th>
+                <th scope="col">Edit</th>
+                <th scope="col">Active</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (modelsSearchList != null)
+            {
+                @foreach (Model model in modelsSearchList)
+                {
+                    <tr class="@(model.Is_Active == false ? " btn-danger" : "")">
+                        <td @onclick="() => SelectModel(model.Id, model.ModelName)">@model.ModelName</td>
+                        <td @onclick="() => SelectModel(model.Id, model.ModelName)">@model.Year</td>
+                        <td><Button class="btn btn-sm btn-success" @onclick="() =>  ShowUpdateModal(model)">Edit</Button></td>
+                        <td><Button class="btn btn-sm btn-success" @onclick="() => DeactivateAndActivate(model)">
+                                @if (model.Is_Active == false)
+                                {
+                                    <span class="text-in-button">&nbsp; Activate &nbsp;</span>
+                                }
+                                else
+                                {
+                                    <span>Deactivate</span>
+                                }
+                            </Button>
+                        </td>
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+<div id="modal" class="modal text-center">
+    <form class="modal-content">
+        <div class="container">
+            @switch (CurrentAction)
+            {
+                case ModalActions.Update:
+                    <h3 class="text-center form-signin">Update Car Model</h3>
+                    <EditForm method="post" EditContext="@EC" class="text-center justify-content-center form-signin">
+                        <DataAnnotationsValidator />
+                        <div class="form-group row">
+                            <label for="ModelName" class="col-sm-2 col-form-label">Model Name</label>
+                            <div class="col-sm-10">
+                                <input class="form-control" type="text" id="ModelName" placeholder="Name" @bind-value="Model.ModelName" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="ModelYear" class="col-sm-2 col-form-label">Model Year</label>
+                            <div class="col-sm-10">
+                                <input class="form-control" type="text" id="ModelYear" placeholder="Year" @bind-value="Model.Year" />
+                            </div>
+                        </div>
+                        <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                    </EditForm>
+
+                    <div class="clearfix">
+                        <button type="button" class="btn btn-sm btn-success"
+                                @onclick="UpdateModel">
+                            Update
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                @onclick="HideModal">
+                            Close
+                        </button>
+                    </div>
+                    <p style="color:red" id="ErrorCode">@ModalError</p>
+                    break;
+
+
+                case ModalActions.Create:
+                    <h3 class="text-center form-signin">Create Car Model</h3>
+                    <EditForm method="post" EditContext="@EC" class="text-center justify-content-center form-signin">
+                        <DataAnnotationsValidator />
+
+                        <div class="form-group row">
+                            <label for="ModelName" class="col-sm-2 col-form-label">Model Name</label>
+                            <div class="col-sm-10">
+                                <input class="form-control" type="text" id="ModelName" placeholder="Name" @bind-value="Model.ModelName" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="ModelYear" class="col-sm-2 col-form-label">Model Year</label>
+                            <div class="col-sm-10">
+                                <input class="form-control" type="text" id="ModelYear" placeholder="Year" @bind-value="Model.Year" />
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <label for="Is_Active" class="col-sm-2 col-form-label">Is Active</label>
+                            <div class="col-sm-10">
+                                <input class="form-control" type="checkbox" id="Is_Active" @bind-value="Model.Is_Active" />
+                            </div>
+                        </div>
+
+                        <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+                    </EditForm>
+
+                    <div class="clearfix">
+                        <button type="button" class="btn btn-sm btn-success"
+                                @onclick="CreateModel">
+                            Create
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary"
+                                @onclick="HideModal">
+                            Close
+                        </button>
+                    </div>
+                    <p style="color:red" id="ErrorCode">@ModalError</p>
+                    break;
+            }
+        </div>
+    </form>
+</div>
+
+@code {
+    // Used to decide what the modal will show
+    public ModalActions CurrentAction { get; set; }
+    public string ModalError { get; set; }
+
+    public Model SelectedModel { get; set; }
+
+    public int ManufacturerIDFromLastPage { get; set; }
+    private string ManufactuerName { get; set; }
+
+    public string APIAnswer { get; set; }
+    public string ErrorMessage { get; set; }
+
+    //Used for edit.
+    private EditContext EC;
+
+    public List<Model> models { get; set; }
+    public List<Model> modelsSearchList { get; set; }
+    public string SearchValue { get; set; }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender == true)
+        {
+            await JSRuntime.InvokeVoidAsync("loadModal");
+        }
+    }
+
+    protected override void OnInitialized()
+    {
+        //Name for editform with a user obejct in it, so valdation can be done.
+        EC = new EditContext(Model);
+        base.OnInitialized();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        var uri = NavManager.ToAbsoluteUri(NavManager.Uri);
+        if (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ManufacturerID", out var ManufacturerID) && (QueryHelpers.ParseQuery(uri.Query).TryGetValue("ManufactuerName", out var ManufactuerNameFromLastPage)))
+        {
+            ManufacturerIDFromLastPage = Convert.ToInt32(ManufacturerID);
+            ManufactuerName = ManufactuerNameFromLastPage;
+            await GetModelList(ManufacturerIDFromLastPage);
+        }
+        else
+        {
+            ErrorMessage = "No Manufacturer ID From Last Page.";
+        }
+    }
+
+    public async Task GetModelList(int ManufacturerID)
+    {
+        APIAnswer = await ModelServices.GetModelListAdmin(ManufacturerID);
+        try
+        {
+            models = JsonConvert.DeserializeObject<List<Model>>(APIAnswer);
+            modelsSearchList = models;
+            if (modelsSearchList.Count == 0)
+            {
+                ErrorMessage = "Model List Is Empty";
+            }
+        }
+        catch (Exception)
+        {
+            ErrorMessage = APIAnswer;
+        }
+    }
+
+    public void SelectModel(int ModelID, string ModelName)
+    {
+        NavManager.NavigateTo("/AdminSearchCarEngine/?ModelID=" + ModelID + "&ManufactuerName="+ ManufactuerName + "&ModelName=" + ModelName, true);
+    }
+
+    private void SearchChangeEvent(ChangeEventArgs args)
+    {
+        // Get the search value from the textbox
+        SearchValue = args.Value.ToString();
+        // Use Search to filter the displayed list down
+        modelsSearchList = models.Where(model => model.ModelName.ToLower().Contains(SearchValue.ToLower())).ToList();
+    }
+
+    private async Task CreateModel()
+    {
+        if (EC.Validate())
+        {
+            try
+            {
+                Model.ManufacturerId = ManufacturerIDFromLastPage;
+                ModalError = await ModelServices.CreateModel(Model);
+                await GetModelList(ManufacturerIDFromLastPage);
+            }
+            catch (Exception)
+            {
+                ModalError = "Unexpected Error";
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateModel()
+    {
+        if (EC.Validate())
+        {
+            try
+            {
+                ModalError = await ModelServices.UpdateModel(Model);
+                await GetModelList(ManufacturerIDFromLastPage);
+            }
+            catch (Exception)
+            {
+                ModalError = "Unexpected Error";
+            }
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeactivateAndActivate(Model model)
+    {
+        if (model.Is_Active == false)
+        {
+            model.Is_Active = true;
+        }
+        else
+        {
+            model.Is_Active = false;
+        }
+        try
+        {
+            ErrorMessage = await ModelServices.UpdateModel(model);
+            await GetModelList(ManufacturerIDFromLastPage);
+        }
+        catch (Exception)
+        {
+            ErrorMessage = "Unexpected Error";
+        }
+        StateHasChanged();
+    }
+
+    private async Task ShowUpdateModal(Model model)
+    {
+        Model.Id = model.Id;
+        Model.ModelName = model.ModelName;
+        Model.Year = model.Year;
+        Model.Is_Active = model.Is_Active;
+        ClearErrorText();
+        CurrentAction = ModalActions.Update;
+        await JSRuntime.InvokeVoidAsync("showModal");
+    }
+
+    private async Task ShowCreateModal()
+    {
+        ClearErrorText();
+        ClearInput();
+        CurrentAction = ModalActions.Create;
+        await JSRuntime.InvokeVoidAsync("showModal");
+    }
+
+    private async Task HideModal()
+    {
+        await JSRuntime.InvokeVoidAsync("hideModal");
+        ClearErrorText();
+    }
+
+    private void ClearErrorText()
+    {
+        ModalError = "";
+        ErrorMessage = "";
+        EC = new EditContext(Model);
+    }
+
+    private void ClearInput()
+    {
+        Model.Id = 0;
+        Model.ModelName = "";
+        Model.Year = 0;
+        Model.Is_Active = false;
+    }
+}

@@ -1,0 +1,93 @@
+﻿@using Microsoft.AspNetCore.Components.Web
+@using Website.Services
+@using ModelLibrary
+@using Microsoft.AspNetCore.Components.Forms
+@inject NavigationManager NavManger
+@inject UserServices UserServices
+@inject User User
+
+<h3 class="text-center">Create User</h3>
+
+<EditForm EditContext="@EC" OnValidSubmit="CreateUser" class="text-center mx-auto w-75">
+    <DataAnnotationsValidator />
+
+    <div class="form-group row">
+        <label for="inputFirstname" class="col-sm-2 col-form-label">Firstname</label>
+        <div class="col-sm-10">
+            <input class="form-control" type="text" id="InputFirstname" placeholder="Firstname" required autofocus @bind-value="User.FirstName">
+        </div>
+    </div>
+    <div class="form-group row">
+        <label for="inputLastname" class="col-sm-2 col-form-label">Lastname</label>
+        <div class="col-sm-10">
+            <input class="form-control" type="text" id="InputLastname" placeholder="Lastname" required @bind="User.LastName">
+        </div>
+    </div>
+    <div class="form-group row">
+        <label for="InputEmail" class="col-sm-2 col-form-label">Email</label>
+        <div class="col-sm-10">
+            <input class="form-control" type="text" id="InputEmail" placeholder="Email" required @bind="User.Email">
+        </div>
+    </div>
+    <div class="form-group row">
+        <label for="InputPassword" class="col-sm-2 col-form-label">Password</label>
+        <div class="col-sm-10">
+            <input class="form-control" type="password" id="InputPassword" placeholder="Password" required @bind="User.Password">
+        </div>
+    </div>
+    <div class="form-group row">
+        <label for="InputConfirmPassword" class="col-sm-2 col-form-label">Confirm Password</label>
+        <div class="col-sm-10">
+            <input class="form-control" type="password" id="InputConfirmPassword" placeholder="ConfirmPassword" required @bind="UserConfirmPassword">
+        </div>
+    </div>
+    
+    <button type="submit" class="btn btn-lg btn-success text-center w-50">
+        Create User
+    </button>
+
+    <p style="color:red" id="ValdationSummary"><ValidationSummary /></p>
+    <p style="color:red">@Error</p>
+</EditForm>
+
+@code {
+    private string Error { get; set; }
+
+    private EditContext EC;
+
+    public string UserConfirmPassword { get; set; }
+
+    protected override void OnInitialized()
+    {
+        //Name for editform with a user obejct in it, so valdation can be done.
+        EC = new EditContext(User);
+        base.OnInitialized();
+    }
+
+    private async Task CreateUser()
+    {
+        if (User.Password == UserConfirmPassword)
+        {
+            try
+            {
+                Error = await UserServices.CreateUser(User);
+                if (Error == "User has been created")
+                {
+                    StateHasChanged();
+                    NavManger.NavigateTo("/Login", forceLoad: true);
+                }
+            }
+            catch (Exception)
+            {
+                //Error
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            Error = "Passwords did not match.";
+            User.Password = "";
+            UserConfirmPassword = "";
+        }
+    }
+}
